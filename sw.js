@@ -1,5 +1,5 @@
 // Service Worker for 智能错题本
-const CACHE_NAME = 'error-notebook-v1';
+const CACHE_NAME = 'error-notebook-v3';
 const ASSETS = [
   '.',
   'index.html',
@@ -12,7 +12,17 @@ self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
       return cache.addAll(ASSETS);
-    })
+    }).then(function () { return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener('activate', function (e) {
+  // 清理旧版本缓存
+  e.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (k) { return k !== CACHE_NAME; })
+        .map(function (k) { return caches.delete(k); }));
+    }).then(function () { return self.clients.claim(); })
   );
 });
 
