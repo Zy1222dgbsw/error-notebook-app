@@ -316,10 +316,7 @@ async function startOCR() {
 
     STATE.ocrResult = data.text.trim();
     // 清理多余空白字符
-    STATE.ocrResult = STATE.ocrResult.replace(/
-{3,}/g, '
-
-').replace(/ {2,}/g, ' ');
+    STATE.ocrResult = STATE.ocrResult.replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ');
 
     if (!STATE.ocrResult) {
       showToast('未能识别到文字，请确保图片清晰且包含文字', 'warning');
