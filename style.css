@@ -84,9 +84,17 @@
   box-sizing: border-box;
 }
 
-/* hidden 属性必须永远生效，覆盖其他 display 规则 */
-[hidden] {
+/* hidden 属性必须生效，但 tab-panel 仍由 .active 类控制显示 */
+[hidden]:not(.tab-panel) {
   display: none !important;
+}
+
+/* Tab 切换：默认隐藏所有 panel，加 .active 的才显示 */
+.tab-panel:not(.active) {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
 }
 
 body {
@@ -269,14 +277,6 @@ body {
 /* ===== 主内容区 ===== */
 .main-content {
   padding: 16px;
-}
-
-.tab-panel {
-  display: none;
-}
-
-.tab-panel.active {
-  display: block;
 }
 
 /* ===== 卡片 ===== */
