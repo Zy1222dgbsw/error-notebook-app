@@ -267,6 +267,12 @@ function initOCR() {
 }
 
 async function startOCR() {
+  // 检查 Tesseract 是否加载成功
+  if (typeof Tesseract === 'undefined' || window.TESSERACT_UNAVAILABLE) {
+    showToast('OCR 引擎加载失败，请检查网络后刷新页面重试', 'error');
+    return;
+  }
+
   if (!STATE.currentImage) {
     showToast('请先拍摄或选择图片', 'warning');
     return;
