@@ -95,15 +95,21 @@
   function addSubject() {
     const nameInput = $('newSubjectName');
     const colorInput = $('newSubjectColor');
+    const typesInput = $('newSubjectTypes');
     const name = nameInput.value.trim();
     if (!name) { showToast('请输入学科名称', 'warning'); return; }
+    // 解析用户输入的题型，逗号分隔
+    const typesRaw = typesInput.value.trim();
+    const types = typesRaw ? typesRaw.split(/[,，、\s]+/).filter(function(t) { return t.length > 0; }) : [];
     STATE.subjects.push({
       id: 'subject_' + Date.now(),
       name: name,
-      color: colorInput.value
+      color: colorInput.value,
+      types: types
     });
     saveSubjects();
     nameInput.value = '';
+    typesInput.value = '';
     renderSubjectList();
     updateSubjectSelect();
     updateFilterSelect();
@@ -514,21 +520,20 @@
 
     // 拍照 / 上传
     $('btnTakePhoto').addEventListener('click', startCamera);
-    $('btnPickFile').addEventListener('click', function () { $('fileInput').click(); });
+    $('btnPickFile').addEventListener('click', function () {
+      $('fileInput').click();
+    });
     $('fileInput').addEventListener('change', function (e) {
       if (e.target.files.length > 0) handleImageFile(e.target.files[0]);
     });
     $('btnRetake').addEventListener('click', resetUpload);
 
-    const uploadArea = $('uploadArea');
+    var uploadArea = $('uploadArea');
     uploadArea.addEventListener('dragover', function (e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
     uploadArea.addEventListener('dragleave', function () { uploadArea.classList.remove('drag-over'); });
     uploadArea.addEventListener('drop', function (e) {
       e.preventDefault(); uploadArea.classList.remove('drag-over');
       if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
-    });
-    uploadArea.addEventListener('click', function (e) {
-      if (e.target === uploadArea || e.target.closest('.upload-placeholder')) $('fileInput').click();
     });
 
     // OCR
