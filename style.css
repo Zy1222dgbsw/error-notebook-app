@@ -754,7 +754,7 @@ body {
 /* ===== 响应式 ===== */
 @media (max-width: 480px) {
   .main-content {
-    padding: 10px;
+    padding: 8px;
   }
 
   .card {
@@ -789,5 +789,39 @@ body {
 
   .modal {
     max-height: 85vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    margin-top: auto;
+  }
+
+  /* 移动端底部安全区域适配 */
+  .app-container {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* 长按菜单优化 */
+  .error-card {
+    -webkit-touch-callout: none;
+  }
+
+  /* 移动端按钮增大触控区域 */
+  .btn-sm {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .upload-actions {
+    flex-direction: column;
+  }
+
+  .upload-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* iPad 等中等屏幕 */
+@media (min-width: 481px) and (max-width: 768px) {
+  .upload-actions {
+    flex-wrap: wrap;
   }
 }
