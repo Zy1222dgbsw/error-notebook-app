@@ -58,6 +58,12 @@
       const savedErrors = localStorage.getItem('errorNotebook_errors');
       if (savedSubjects) {
         STATE.subjects = JSON.parse(savedSubjects);
+        // 兼容老数据：确保每个学科都有 types 字段
+        var needsResave = false;
+        STATE.subjects.forEach(function (s) {
+          if (!s.types) { s.types = []; needsResave = true; }
+        });
+        if (needsResave) saveSubjects();
       } else {
         STATE.subjects = DEFAULT_SUBJECTS.slice();
         saveSubjects();
@@ -376,7 +382,7 @@
       const subjectColor = subject ? subject.color : '#9CA3AF';
       const typeTag = error.questionType ? '<span class="type-badge">' + escapeHTML(error.questionType) + '</span>' : '';
       const date = new Date(error.createdAt).toLocaleString('zh-CN');
-      return '<div class="error-card"><div class="error-card-header"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片" loading="lazy">' : '') + '<div class="error-text" data-action="toggle-text">' + escapeHTML(error.ocrText) + '</div></div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
+      return '<div class="error-card"><div class="error-card-header"><input type="checkbox" class="error-checkbox" data-action="toggle-select" data-id="' + error.id + '" data-print="1"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片" loading="lazy">' : '') + '<div class="error-text" data-action="toggle-text">' + escapeHTML(error.ocrText) + '</div>' + (error.aiAnswer ? '<details class="ai-answer-print"><summary>🤖 AI 解答</summary><div class="ai-answer-content">' + formatAIAnswer(error.aiAnswer) + '</div></details>' : '') + '</div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
     }).join('');
   }
 
@@ -387,6 +393,64 @@
     renderErrorList();
     updateFilterSelect();
     showToast('错题已删除', 'success');
+  }
+
+  // ===== 打印功能 =====
+  function printSelectedErrors() {
+    const checkboxes = $$('.error-checkbox:checked');
+    if (checkboxes.length === 0) {
+      showToast('请先勾选要打印的错题', 'warning');
+      return;
+    }
+    const selectedIds = checkboxes.map(function (cb) { return cb.dataset.id; });
+    const selected = STATE.errors.filter(function (e) { return selectedIds.indexOf(e.id) >= 0; });
+
+    // 构建打印 HTML
+    const printWin = window.open('', '_blank', 'width=800,height=900');
+    if (!printWin) {
+      showToast('浏览器拦截了弹窗，请允许弹窗', 'error');
+      return;
+    }
+    const styleHTML = document.querySelector('link[rel="stylesheet"]').outerHTML;
+    const printCSS = `
+      <style>
+        @page { margin: 1.5cm; size: A4; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 20px; color: #1F2937; }
+        h1 { text-align: center; color: #4F46E5; border-bottom: 2px solid #4F46E5; padding-bottom: 10px; }
+        .meta { text-align: center; color: #6B7280; margin-bottom: 20px; font-size: 14px; }
+        .error-item { border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
+        .error-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .subject-tag { background: #4F46E5; color: white; padding: 4px 10px; border-radius: 4px; font-size: 13px; }
+        .type-tag { background: #818CF8; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
+        .date { color: #6B7280; font-size: 13px; }
+        .question-num { color: #4F46E5; font-weight: 700; margin-bottom: 8px; }
+        .question-text { white-space: pre-wrap; font-size: 15px; line-height: 1.8; margin-bottom: 10px; }
+        .question-image { max-width: 100%; max-height: 300px; border-radius: 4px; margin: 8px 0; }
+        .ai-answer { background: #F3F4F6; border-left: 3px solid #4F46E5; padding: 12px; margin-top: 12px; border-radius: 4px; font-size: 14px; line-height: 1.7; }
+        .ai-answer h3 { color: #4F46E5; font-size: 14px; margin: 8px 0 4px; }
+        .answer-line { border-top: 1px dashed #E5E7EB; height: 30px; margin-top: 12px; }
+      </style>`;
+    const now = new Date().toLocaleString('zh-CN');
+
+    let itemsHTML = selected.map(function (error, idx) {
+      const subject = STATE.subjects.find(function (s) { return s.id === error.subjectId; });
+      const subjectName = subject ? subject.name : '未分类';
+      const typeTag = error.questionType ? '<span class="type-tag">' + escapeHTML(error.questionType) + '</span>' : '';
+      const imageHTML = error.imageData ? '<img src="' + error.imageData + '" class="question-image">' : '';
+      const answerHTML = error.aiAnswer ? '<div class="ai-answer"><strong>AI 解答：</strong>' + formatAIAnswer(error.aiAnswer) + '</div>' : '<div class="answer-line"></div><div class="answer-line"></div><div class="answer-line"></div>';
+      return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + escapeHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
+    }).join('');
+
+    printWin.document.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + '<script>window.onload = function() { setTimeout(function() { window.print(); }, 200); };<\/script></body></html>');
+    printWin.document.close();
+    showToast('已生成打印预览', 'success');
+  }
+
+  function toggleSelectAll() {
+    const checkboxes = $$('.error-checkbox');
+    const allChecked = checkboxes.every(function (cb) { return cb.checked; });
+    checkboxes.forEach(function (cb) { cb.checked = !allChecked; });
+    $('btnSelectAll').textContent = allChecked ? '全选' : '取消全选';
   }
 
   // ===== AI 智能解答 =====
@@ -559,6 +623,8 @@
     // 错题筛选
     $('filterSubject').addEventListener('change', renderErrorList);
     $('searchInput').addEventListener('input', renderErrorList);
+    $('btnSelectAll').addEventListener('click', toggleSelectAll);
+    $('btnPrintSelected').addEventListener('click', printSelectedErrors);
 
     // ===== 设置弹窗（关键修复：每个按钮都单独绑定） =====
     $('btnSettings').addEventListener('click', openSettings);
