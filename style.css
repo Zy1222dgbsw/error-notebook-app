@@ -410,27 +410,83 @@ body {
 }
 
 .result-text {
-  background: #F9FAFB;
-  border: 1px solid var(--border);
+  background: var(--upload-bg);
+  border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 16px;
   min-height: 100px;
   font-size: 15px;
   line-height: 1.8;
   margin-top: 8px;
+  margin-bottom: 4px;
   white-space: pre-wrap;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.result-text:empty::before {
+  content: attr(placeholder);
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .result-text:focus {
-  outline: 2px solid var(--primary-light);
-  background: white;
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background: var(--surface);
 }
 
-/* ===== 保存区域 ===== */
-.save-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
+.ocr-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.ocr-result-header h4 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.ocr-edit-badge {
+  display: inline-block;
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--primary);
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.ocr-edit-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 160px;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: white;
+  margin-left: 6px;
 }
 
 .form-group {
