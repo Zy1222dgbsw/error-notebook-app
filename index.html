@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>智能错题本 - Smart Error Notebook</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="错题本">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Tesseract.js: 优先使用国内CDN，失败后用备用CDN -->
   <script>
     (function() {
@@ -41,7 +46,10 @@
         <span class="logo">📓</span>
         <h1>智能错题本</h1>
       </div>
-      <button class="btn-icon settings-btn" id="btnSettings" title="设置">⚙️</button>
+      <div class="header-actions">
+        <button class="btn-icon" id="btnTheme" title="切换深色/浅色模式">🌙</button>
+        <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
+      </div>
     </header>
 
     <!-- 标签切换 -->
