@@ -5,7 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>智能错题本 - Smart Error Notebook</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Tesseract.js: 优先使用国内CDN，失败后用备用CDN -->
+  <script>
+    (function() {
+      var CDNS = [
+        'https://registry.npmmirror.com/tesseract.js/5.1.1/files/dist/tesseract.min.js',
+        'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
+        'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
+      ];
+      var idx = 0;
+      function tryLoad() {
+        if (idx >= CDNS.length) return;
+        var s = document.createElement('script');
+        s.src = CDNS[idx];
+        s.onload = function() { console.log('Tesseract.js loaded from CDN #' + (idx + 1)); };
+        s.onerror = function() { idx++; tryLoad(); };
+        document.head.appendChild(s);
+      }
+      // 8 秒后如果还没加载成功，标记为不可用
+      setTimeout(function() {
+        if (typeof Tesseract === 'undefined') {
+          console.warn('Tesseract.js CDN 全部加载失败，OCR 功能不可用');
+          window.TESSERACT_UNAVAILABLE = true;
+        }
+      }, 8000);
+      tryLoad();
+    })();
+  </script>
 </head>
 <body>
   <div class="app-container">
