@@ -260,6 +260,8 @@ function showOCRButton() {
 }
 
 // ===== OCR 文字识别 (Tesseract.js) =====
+let ocrWorker = null;
+
 function initOCR() {
   document.getElementById('btnStartOCR').addEventListener('click', startOCR);
 }
@@ -279,25 +281,42 @@ async function startOCR() {
   document.getElementById('btnStartOCR').disabled = true;
 
   try {
-    const worker = await Tesseract.createWorker('chi_sim+eng', 1, {
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          const progress = Math.round(m.progress * 100);
-          progressFill.style.width = progress + '%';
-          progressText.textContent = `正在识别文字... ${progress}%`;
-        } else {
-          progressText.textContent = '正在加载识别引擎...';
+    // 复用 Worker 实例，避免重复加载语言包（首次加载约30MB）
+    if (!ocrWorker) {
+      ocrWorker = await Tesseract.createWorker('chi_sim+eng', 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            const progress = Math.round(m.progress * 100);
+            progressFill.style.width = progress + '%';
+            progressText.textContent = `正在识别文字... ${progress}%`;
+          } else if (m.status === 'loading tesseract core') {
+            progressText.textContent = '正在加载识别引擎（首次可能较慢）...';
+          } else if (m.status === 'initializing tesseract') {
+            progressText.textContent = '正在初始化中文语言包...';
+          } else {
+            progressText.textContent = '正在准备识别...';
+          }
         }
-      }
-    });
+      });
 
-    const { data } = await worker.recognize(STATE.currentImage);
-    await worker.terminate();
+      // 设置页面分割模式为自动，提升复杂排版识别率
+      await ocrWorker.setParameters({
+        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+      });
+    }
+
+    const { data } = await ocrWorker.recognize(STATE.currentImage);
+    // 不 terminate，保留 worker 复用
 
     STATE.ocrResult = data.text.trim();
+    // 清理多余空白字符
+    STATE.ocrResult = STATE.ocrResult.replace(/
+{3,}/g, '
+
+').replace(/ {2,}/g, ' ');
 
     if (!STATE.ocrResult) {
-      showToast('未能识别到文字，请确保图片清晰', 'warning');
+      showToast('未能识别到文字，请确保图片清晰且包含文字', 'warning');
       progressDiv.hidden = true;
       document.getElementById('btnStartOCR').disabled = false;
       return;
@@ -311,7 +330,12 @@ async function startOCR() {
     showToast('文字识别完成！', 'success');
   } catch (err) {
     console.error('OCR识别失败:', err);
-    showToast('OCR识别失败，请重试', 'error');
+    // 释放异常 worker，下次重新创建
+    if (ocrWorker) {
+      try { await ocrWorker.terminate(); } catch (e) {}
+      ocrWorker = null;
+    }
+    showToast('OCR识别失败，请确保图片清晰后重试', 'error');
   } finally {
     progressDiv.hidden = true;
     document.getElementById('btnStartOCR').disabled = false;
@@ -576,10 +600,11 @@ function askAI(errorId) {
     });
 }
 
-async function callAI(question) {
+async function callAI(question, retryCount = 0) {
   const provider = localStorage.getItem('errorNotebook_aiProvider') || 'pollinations';
   const apiKey = localStorage.getItem('errorNotebook_apiKey') || '';
   const customEndpoint = localStorage.getItem('errorNotebook_customEndpoint') || '';
+  const MAX_RETRIES = 2;
 
   const systemPrompt = `你是一位经验丰富的老师。请为学生解答这道错题。请按以下格式回答：
 
@@ -592,7 +617,11 @@ async function callAI(question) {
 
   if (provider === 'pollinations') {
     // 免费的 Pollinations AI，无需 API Key
+    // 使用 AbortController 实现超时控制
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch('https://text.pollinations.ai/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -604,16 +633,22 @@ async function callAI(question) {
           model: 'openai',
           temperature: 0.7,
           max_tokens: 2000
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
-      if (!response.ok) throw new Error('API请求失败');
+      if (!response.ok) throw new Error('API 返回错误: ' + response.status);
 
       const data = await response.json();
       return data.choices ? data.choices[0].message.content : (data.text || data.response || JSON.stringify(data));
     } catch (err) {
-      console.error('Pollinations AI 调用失败:', err);
-      // 返回备用答案
+      console.error('Pollinations AI 调用失败:', err.message);
+      // 重试一次
+      if (retryCount < MAX_RETRIES) {
+        console.log('正在重试... (' + (retryCount + 1) + '/' + MAX_RETRIES + ')');
+        return callAI(question, retryCount + 1);
+      }
       return generateFallbackAnswer(question);
     }
   }
