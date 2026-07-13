@@ -994,3 +994,80 @@ body {
     flex-wrap: wrap;
   }
 }
+
+/* ===== 复选框 ===== */
+.error-checkbox {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+
+/* ===== 打印样式 ===== */
+@media print {
+  .tab-nav, .app-header, .filter-bar, .upload-actions,
+  .error-card-footer, .btn, .toast-container, .modal-overlay,
+  .error-checkbox, .btn-icon, .add-subject-form {
+    display: none !important;
+  }
+
+  .app-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  body, .app-container {
+    background: white !important;
+    color: black !important;
+  }
+
+  .tab-panel {
+    display: block !important;
+  }
+
+  #panel-scan, #panel-subjects {
+    display: none !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+
+  .error-card {
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+  }
+
+  .error-image {
+    max-height: 200px;
+  }
+
+  .error-text {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .error-text::after {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+}
+
+.print-only {
+  display: none;
+}
