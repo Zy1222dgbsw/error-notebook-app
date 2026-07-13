@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能错题本 - Smart Error Notebook</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 顶部导航 -->
+    <header class="app-header">
+      <div class="header-left">
+        <span class="logo">📓</span>
+        <h1>智能错题本</h1>
+      </div>
+      <button class="btn-icon settings-btn" id="btnSettings" title="设置">⚙️</button>
+    </header>
+
+    <!-- 标签切换 -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="scan">📸 拍照录入</button>
+      <button class="tab-btn" data-tab="notebook">📋 错题本</button>
+      <button class="tab-btn" data-tab="subjects">📚 学科管理</button>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+
+      <!-- ===== Tab 1: 拍照录入 ===== -->
+      <section class="tab-panel active" id="panel-scan">
+        <div class="card">
+          <h2>拍摄或上传错题照片</h2>
+          <p class="subtitle">支持拍照或从相册选择图片，自动识别题目文字</p>
+          
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <span class="upload-icon">📷</span>
+              <p>点击拍照 或 拖拽图片到此处</p>
+              <p class="upload-hint">支持 JPG、PNG 格式</p>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+            <video id="cameraPreview" autoplay playsinline hidden></video>
+            <canvas id="cameraCanvas" hidden></canvas>
+            <img id="imagePreview" alt="预览" hidden>
+          </div>
+
+          <div class="upload-actions">
+            <button class="btn btn-primary" id="btnTakePhoto">📷 拍照</button>
+            <button class="btn btn-secondary" id="btnPickFile">📁 选择图片</button>
+            <button class="btn btn-secondary" id="btnRetake" hidden>🔄 重新拍摄</button>
+          </div>
+
+          <div id="ocrSection" class="ocr-section" hidden>
+            <div class="ocr-header">
+              <h3>🔍 文字识别</h3>
+              <button class="btn btn-primary btn-sm" id="btnStartOCR">开始识别</button>
+            </div>
+            <div id="ocrProgress" class="ocr-progress" hidden>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <p id="progressText">正在识别...</p>
+            </div>
+            <div class="ocr-result" id="ocrResult" hidden>
+              <h4>识别结果：</h4>
+              <div class="result-text" id="ocrText" contenteditable="true"></div>
+              <p class="hint">✏️ 可以手动修改识别结果</p>
+            </div>
+          </div>
+
+          <div id="saveSection" class="save-section" hidden>
+            <div class="form-group">
+              <label>选择学科：</label>
+              <select id="subjectSelect">
+                <option value="">-- 请选择学科 --</option>
+              </select>
+            </div>
+            <button class="btn btn-success" id="btnSaveError">💾 保存错题</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Tab 2: 错题本 ===== -->
+      <section class="tab-panel" id="panel-notebook">
+        <div class="card">
+          <div class="notebook-header">
+            <h2>我的错题本</h2>
+            <div class="filter-bar">
+              <select id="filterSubject" class="filter-select">
+                <option value="all">全部学科</option>
+              </select>
+              <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜索错题...">
+            </div>
+          </div>
+          <div id="errorList" class="error-list">
+            <div class="empty-state">
+              <span class="empty-icon">📝</span>
+              <p>还没有错题记录</p>
+              <p class="hint">去「拍照录入」添加你的第一道错题吧！</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Tab 3: 学科管理 ===== -->
+      <section class="tab-panel" id="panel-subjects">
+        <div class="card">
+          <h2>学科管理</h2>
+          <p class="subtitle">创建学科分类，让错题整理更有序</p>
+          
+          <div class="add-subject-form">
+            <input type="text" id="newSubjectName" class="form-input" placeholder="输入学科名称，如：高等数学">
+            <input type="color" id="newSubjectColor" value="#4F46E5" class="color-picker" title="选择颜色">
+            <button class="btn btn-primary" id="btnAddSubject">➕ 添加学科</button>
+          </div>
+
+          <div id="subjectList" class="subject-list">
+            <div class="empty-state">
+              <span class="empty-icon">📚</span>
+              <p>还没有学科分类</p>
+              <p class="hint">在上面创建一个学科开始使用吧！</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- AI 解答弹窗 -->
+    <div class="modal-overlay" id="modalOverlay" hidden>
+      <div class="modal">
+        <div class="modal-header">
+          <h3>🤖 AI 智能解答</h3>
+          <button class="btn-icon modal-close" id="btnCloseModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="question-display">
+            <h4>📝 题目：</h4>
+            <p id="modalQuestion"></p>
+          </div>
+          <div class="answer-section" id="answerSection">
+            <div id="answerLoading" hidden>
+              <div class="loading-spinner"></div>
+              <p>AI 正在思考...</p>
+            </div>
+            <div id="answerContent" class="answer-content" hidden></div>
+            <div id="answerError" class="answer-error" hidden>
+              <p>😔 AI解答暂时不可用</p>
+              <p class="hint">请检查网络连接或在设置中配置API密钥</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCloseModal2">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsOverlay" hidden>
+      <div class="modal modal-settings">
+        <div class="modal-header">
+          <h3>⚙️ 设置</h3>
+          <button class="btn-icon modal-close" id="btnCloseSettings">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>AI 服务提供商：</label>
+            <select id="aiProvider" class="form-select">
+              <option value="pollinations">Pollinations AI（免费，无需密钥）</option>
+              <option value="deepseek">DeepSeek（需API密钥，中文效果好）</option>
+              <option value="custom">自定义接口</option>
+            </select>
+          </div>
+          <div class="form-group" id="apiKeyGroup" hidden>
+            <label>API 密钥：</label>
+            <input type="password" id="apiKey" class="form-input" placeholder="输入你的 API Key">
+          </div>
+          <div class="form-group" id="customEndpointGroup" hidden>
+            <label>自定义接口地址：</label>
+            <input type="text" id="customEndpoint" class="form-input" placeholder="https://your-api.com/v1/chat">
+          </div>
+          <button class="btn btn-primary" id="btnSaveSettings">💾 保存设置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
