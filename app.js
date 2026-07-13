@@ -521,6 +521,20 @@
 
     // ===== 设置弹窗（关键修复：每个按钮都单独绑定） =====
     $('btnSettings').addEventListener('click', openSettings);
+    // 深色模式切换
+    const btnTheme = $('btnTheme');
+    const savedTheme = localStorage.getItem('errorNotebook_theme');
+    function applyTheme(t) {
+      document.documentElement.dataset.theme = t;
+      btnTheme.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+    applyTheme(savedTheme || 'auto');
+    btnTheme.addEventListener('click', function () {
+      const cur = document.documentElement.dataset.theme || 'auto';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem('errorNotebook_theme', next);
+    });
     $('btnCloseSettings').addEventListener('click', function () { $('settingsOverlay').hidden = true; });
     $('settingsOverlay').addEventListener('click', function (e) {
       if (e.target === e.currentTarget) e.currentTarget.hidden = true;
@@ -563,6 +577,15 @@
     toggleProviderFields(provider);
 
     console.log('[ErrorNotebook] 初始化完成，按钮事件已绑定');
+
+  // 注册 Service Worker（PWA 离线支持）
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      console.log('[SW] 注册成功:', reg.scope);
+    }).catch(function (err) {
+      console.log('[SW] 注册失败:', err);
+    });
+  }
   }
 
   // ===== 启动 =====
