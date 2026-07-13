@@ -215,7 +215,7 @@
         $('uploadPlaceholder').hidden = true;
         $('imagePreview').hidden = true;
         $('btnTakePhoto').hidden = true;
-        $('btnPickFile').textContent = '📸 点击拍摄';
+        $('btnPickFile').hidden = true;
         $('btnRetake').hidden = false;
       })
       .catch(function (err) {
@@ -252,7 +252,7 @@
     if (video) { video.srcObject = null; video.hidden = true; }
     $('uploadPlaceholder').hidden = false;
     $('btnTakePhoto').hidden = false;
-    $('btnPickFile').textContent = '📁 选择图片';
+    $('btnPickFile').hidden = false;
     $('btnRetake').hidden = true;
   }
 
