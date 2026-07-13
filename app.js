@@ -17,10 +17,14 @@
   };
 
   const DEFAULT_SUBJECTS = [
-    { id: 'math', name: '数学', color: '#4F46E5' },
-    { id: 'english', name: '英语', color: '#10B981' },
-    { id: 'physics', name: '物理', color: '#F59E0B' },
-    { id: 'chemistry', name: '化学', color: '#EF4444' }
+    { id: 'math', name: '数学', color: '#4F46E5',
+      types: ['选择题', '填空题', '解答题', '判断题', '应用题', '证明题', '计算题'] },
+    { id: 'english', name: '英语', color: '#10B981',
+      types: ['选择题', '填空题', '阅读理解', '翻译题', '写作题', '完形填空', '改错题'] },
+    { id: 'physics', name: '物理', color: '#F59E0B',
+      types: ['选择题', '填空题', '解答题', '判断题', '实验题', '计算题', '作图题'] },
+    { id: 'chemistry', name: '化学', color: '#EF4444',
+      types: ['选择题', '填空题', '解答题', '判断题', '实验题', '计算题', '推断题'] }
   ];
 
   // ===== DOM 工具 =====
@@ -140,9 +144,26 @@
     const select = $('subjectSelect');
     if (!select) return;
     const currentValue = select.value;
-    select.innerHTML = '<option value="">-- 请选择学科 --</option>' + STATE.subjects.map(function (s) {
+    select.innerHTML = '<option value="">-- 选择学科 --</option>' + STATE.subjects.map(function (s) {
       return '<option value="' + s.id + '"' + (s.id === currentValue ? ' selected' : '') + '>' + escapeHTML(s.name) + '</option>';
     }).join('');
+    updateQuestionTypeSelect();
+  }
+
+  function updateQuestionTypeSelect() {
+    const typeSelect = $('questionTypeSelect');
+    if (!typeSelect) return;
+    const subjectId = $('subjectSelect').value;
+    const subject = STATE.subjects.find(function (s) { return s.id === subjectId; });
+    const types = subject && subject.types ? subject.types : [];
+    const currentVal = typeSelect.value;
+    if (types.length === 0) {
+      typeSelect.innerHTML = '<option value="">-- 先选学科 --</option>';
+    } else {
+      typeSelect.innerHTML = '<option value="">-- 选择题型 --</option>' + types.map(function (t) {
+        return '<option value="' + t + '"' + (t === currentVal ? ' selected' : '') + '>' + t + '</option>';
+      }).join('');
+    }
   }
 
   function updateFilterSelect() {
@@ -305,11 +326,13 @@
   // ===== 保存错题 =====
   function saveError() {
     const subjectId = $('subjectSelect').value;
+    const questionType = $('questionTypeSelect').value;
     const ocrText = $('ocrText').textContent.trim();
-    if (!ocrText) { showToast('请先识别或输入题目内容', 'warning'); return; }
+    if (!ocrText) { showToast('请先输入或确认题目内容', 'warning'); return; }
     STATE.errors.unshift({
       id: 'error_' + Date.now(),
       subjectId: subjectId || null,
+      questionType: questionType || null,
       imageData: STATE.currentImage,
       ocrText: ocrText,
       aiAnswer: null,
@@ -345,8 +368,9 @@
       const subject = STATE.subjects.find(function (s) { return s.id === error.subjectId; });
       const subjectName = subject ? subject.name : '未分类';
       const subjectColor = subject ? subject.color : '#9CA3AF';
+      const typeTag = error.questionType ? '<span class="type-badge">' + escapeHTML(error.questionType) + '</span>' : '';
       const date = new Date(error.createdAt).toLocaleString('zh-CN');
-      return '<div class="error-card"><div class="error-card-header"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span><span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片">' : '') + '<div class="error-text" data-action="toggle-text">' + escapeHTML(error.ocrText) + '</div></div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
+      return '<div class="error-card"><div class="error-card-header"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片" loading="lazy">' : '') + '<div class="error-text" data-action="toggle-text">' + escapeHTML(error.ocrText) + '</div></div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
     }).join('');
   }
 
@@ -510,6 +534,18 @@
     // OCR
     $('btnStartOCR').addEventListener('click', startOCR);
     $('btnSaveError').addEventListener('click', saveError);
+    // 编辑工具栏
+    $('btnClearText').addEventListener('click', function () {
+      $('ocrText').textContent = '';
+      $('ocrText').focus();
+    });
+    $('btnConfirmText').addEventListener('click', function () {
+      STATE.ocrResult = $('ocrText').textContent.trim();
+      showToast('内容已确认 ✓', 'success');
+      $('saveSection').hidden = false;
+    });
+    // 学科切换时联动题型
+    $('subjectSelect').addEventListener('change', updateQuestionTypeSelect);
 
     // 学科管理
     $('btnAddSubject').addEventListener('click', addSubject);
