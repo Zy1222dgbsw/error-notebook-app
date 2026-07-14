@@ -1,36 +1,22 @@
-// Service Worker for 智能错题本
-// 简化版：只在网络失败时使用缓存，确保用户始终看到最新版本
-const CACHE_NAME = 'error-notebook-v7';
-const ASSETS = ['.', 'index.html', 'style.css', 'app.js', 'manifest.json'];
-
+// 自毁型 Service Worker - 装上后立刻自我注销
+// 用于清掉所有旧版本的 Service Worker 缓存
 self.addEventListener('install', function (e) {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(
-    caches.keys().then(function (keys) {
-      return Promise.all(keys.map(function (k) { return caches.delete(k); }));
-    }).then(function () { return self.clients.claim(); })
-  );
-});
-
-// 拦截请求：网络优先，失败时用缓存
-self.addEventListener('fetch', function (e) {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request)
-      .then(function (response) {
-        if (response && response.status === 200 && response.type === 'basic') {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(e.request, clone);
-          });
-        }
-        return response;
+    Promise.all([
+      // 注销当前 SW
+      self.registration.unregister(),
+      // 清空所有缓存
+      caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }),
+      // 让所有打开的页面重新加载
+      self.clients.matchAll().then(function (clients) {
+        clients.forEach(function (client) { client.navigate(client.url); });
       })
-      .catch(function () {
-        return caches.match(e.request);
-      })
+    ]).then(function () { return self.clients.claim(); })
   );
 });
