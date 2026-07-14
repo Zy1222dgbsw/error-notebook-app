@@ -139,6 +139,39 @@
     showToast('学科「' + subject.name + '」已删除', 'success');
   }
 
+  // ===== 编辑学科 =====
+  function openEditSubject(id) {
+    const subject = STATE.subjects.find(function (s) { return s.id === id; });
+    if (!subject) return;
+    $('editSubjectName').value = subject.name;
+    $('editSubjectColor').value = subject.color;
+    $('editSubjectTypes').value = (subject.types || []).join(',');
+    $('editSubjectOverlay').dataset.editId = id;
+    $('editSubjectOverlay').hidden = false;
+  }
+
+  function saveEditSubject() {
+    const id = $('editSubjectOverlay').dataset.editId;
+    const subject = STATE.subjects.find(function (s) { return s.id === id; });
+    if (!subject) return;
+    const name = $('editSubjectName').value.trim();
+    if (!name) { showToast('请输入学科名称', 'warning'); return; }
+    const typesRaw = $('editSubjectTypes').value.trim();
+    const types = typesRaw ? typesRaw.split(/[,，、\s]+/).filter(function(t) { return t.length > 0; }) : [];
+    subject.name = name;
+    subject.color = $('editSubjectColor').value;
+    subject.types = types;
+    saveSubjects();
+    $('editSubjectOverlay').hidden = true;
+    renderSubjectList();
+    updateSubjectSelect();
+    updateFilterSelect();
+    showToast('学科已更新 ✓', 'success');
+  }
+    updateFilterSelect();
+    showToast('学科「' + subject.name + '」已删除', 'success');
+  }
+
   function renderSubjectList() {
     const container = $('subjectList');
     if (!container) return;
@@ -148,7 +181,8 @@
     }
     container.innerHTML = STATE.subjects.map(function (subject) {
       const count = STATE.errors.filter(function (e) { return e.subjectId === subject.id; }).length;
-      return '<div class="subject-item"><div class="subject-info"><span class="subject-color-dot" style="background:' + subject.color + '"></span><span class="subject-name">' + escapeHTML(subject.name) + '</span><span class="subject-count">' + count + ' 道错题</span></div><div class="subject-actions"><button class="btn btn-danger btn-sm" data-action="delete-subject" data-id="' + subject.id + '">删除</button></div></div>';
+      const typesPreview = (subject.types && subject.types.length) ? ' · ' + subject.types.join('、') : '';
+      return '<div class="subject-item"><div class="subject-info"><span class="subject-color-dot" style="background:' + subject.color + '"></span><div><div class="subject-name">' + escapeHTML(subject.name) + '</div><div class="subject-types-preview">' + escapeHTML(typesPreview.replace(/^ · /, '')) + '</div></div><span class="subject-count">' + count + ' 道错题</span></div><div class="subject-actions"><button class="btn btn-secondary btn-sm" data-action="edit-subject" data-id="' + subject.id + '">编辑</button><button class="btn btn-danger btn-sm" data-action="delete-subject" data-id="' + subject.id + '">删除</button></div></div>';
     }).join('');
   }
 
@@ -672,10 +706,28 @@
       }
     });
 
-    // ===== 事件委托：学科管理删除按钮 =====
+    // ===== 事件委托：学科管理编辑/删除按钮 =====
     $('subjectList').addEventListener('click', function (e) {
-      const btn = e.target.closest('button[data-action="delete-subject"]');
-      if (btn) deleteSubject(btn.dataset.id);
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'delete-subject') deleteSubject(btn.dataset.id);
+      else if (btn.dataset.action === 'edit-subject') openEditSubject(btn.dataset.id);
+    });
+
+    // ===== 编辑学科弹窗 =====
+    $('btnCloseEditSubject').addEventListener('click', function () { $('editSubjectOverlay').hidden = true; });
+    $('btnCancelEditSubject').addEventListener('click', function () { $('editSubjectOverlay').hidden = true; });
+    $('editSubjectOverlay').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+    });
+    $('btnSaveEditSubject').addEventListener('click', saveEditSubject);
+
+    // ===== 安装指南弹窗 =====
+    $('btnInstallGuide').addEventListener('click', function () { $('installGuideOverlay').hidden = false; });
+    $('btnCloseInstallGuide').addEventListener('click', function () { $('installGuideOverlay').hidden = true; });
+    $('btnCloseInstallGuide2').addEventListener('click', function () { $('installGuideOverlay').hidden = true; });
+    $('installGuideOverlay').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget) e.currentTarget.hidden = true;
     });
 
     // ===== 初始 Provider 显示 =====
