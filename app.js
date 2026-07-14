@@ -733,15 +733,6 @@
     toggleProviderFields(provider);
 
     console.log('[ErrorNotebook] 初始化完成，按钮事件已绑定');
-
-  // 注册 Service Worker（PWA 离线支持）
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(function (reg) {
-      console.log('[SW] 注册成功:', reg.scope);
-    }).catch(function (err) {
-      console.log('[SW] 注册失败:', err);
-    });
-  }
   }
 
   // ===== 启动 =====
