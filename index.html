@@ -47,6 +47,7 @@
         <h1>智能错题本</h1>
       </div>
       <div class="header-actions">
+        <button class="btn-icon" id="btnInstallGuide" title="如何在手机上安装">📱</button>
         <button class="btn-icon" id="btnTheme" title="切换深色/浅色模式">🌙</button>
         <button class="btn-icon" id="btnSettings" title="设置">⚙️</button>
       </div>
@@ -248,6 +249,77 @@
             <input type="text" id="customEndpoint" class="form-input" placeholder="https://your-api.com/v1/chat">
           </div>
           <button class="btn btn-primary" id="btnSaveSettings">💾 保存设置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑学科弹窗 -->
+    <div class="modal-overlay" id="editSubjectOverlay" hidden>
+      <div class="modal modal-settings">
+        <div class="modal-header"><h3>✏️ 编辑学科</h3><button class="btn-icon modal-close" id="btnCloseEditSubject">✕</button></div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>学科名称：</label>
+            <input type="text" id="editSubjectName" class="form-input" placeholder="学科名称">
+          </div>
+          <div class="form-group">
+            <label>颜色：</label>
+            <input type="color" id="editSubjectColor" value="#4F46E5" class="color-picker">
+          </div>
+          <div class="form-group">
+            <label>题型（用逗号分隔）：</label>
+            <input type="text" id="editSubjectTypes" class="form-input" placeholder="如：选择,填空,解答">
+            <p class="hint">每个学科可设置自己的题型，保存错题时可以选择</p>
+          </div>
+          <div class="form-row">
+            <button class="btn btn-primary" id="btnSaveEditSubject">💾 保存修改</button>
+            <button class="btn btn-secondary" id="btnCancelEditSubject">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端安装指南弹窗 -->
+    <div class="modal-overlay" id="installGuideOverlay" hidden>
+      <div class="modal">
+        <div class="modal-header"><h3>📱 如何在手机上安装</h3><button class="btn-icon modal-close" id="btnCloseInstallGuide">✕</button></div>
+        <div class="modal-body">
+          <p class="subtitle" style="margin-top:0">在手机浏览器打开本应用后，按以下步骤安装为 App：</p>
+
+          <div class="install-section">
+            <h4 class="install-title">🤖 Android（安卓）</h4>
+            <ol class="install-steps">
+              <li>用 <strong>Chrome 浏览器</strong> 打开本应用</li>
+              <li>点击右上角 <strong>⋮ 菜单</strong>（三个点）</li>
+              <li>选择 <strong>"添加到主屏幕"</strong> 或 <strong>"安装应用"</strong></li>
+              <li>确认后桌面上会出现 "智能错题本" 图标</li>
+              <li>点击桌面图标即可像 App 一样使用（无地址栏、全屏）</li>
+            </ol>
+          </div>
+
+          <div class="install-section">
+            <h4 class="install-title">🍎 iOS（苹果）</h4>
+            <ol class="install-steps">
+              <li>用 <strong>Safari 浏览器</strong> 打开本应用（必须用 Safari）</li>
+              <li>点击底部的 <strong>分享按钮</strong> ⬆️（方框带向上箭头）</li>
+              <li>向下滑动找到 <strong>"添加到主屏幕"</strong> ➕</li>
+              <li>点击右上角 <strong>"添加"</strong> 确认</li>
+              <li>桌面上会出现 "智能错题本" 图标，点击即可使用</li>
+            </ol>
+          </div>
+
+          <div class="install-section install-tip">
+            <h4 class="install-title">💡 提示</h4>
+            <ul class="install-steps">
+              <li>首次使用需联网下载 OCR 识别引擎（~30MB）</li>
+              <li>之后可离线使用（AI 功能需联网）</li>
+              <li>所有数据存储在手机本地，隐私安全</li>
+              <li>卸载 App 等于删除浏览器缓存，不会影响数据</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCloseInstallGuide2">关闭</button>
         </div>
       </div>
     </div>
