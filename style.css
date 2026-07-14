@@ -1110,3 +1110,22 @@ body {
   color: var(--primary);
   font-weight: 600;
 }
+
+.link-copy-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.install-link {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--primary);
+  word-break: break-all;
+  font-family: monospace;
+}
