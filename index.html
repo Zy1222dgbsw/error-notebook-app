@@ -2,16 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=2">
-  <link rel="manifest" href="manifest.json?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="manifest" href="manifest.json?v=3">
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="错题本">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Tesseract.js: 优先使用国内CDN，失败后用备用CDN -->
   <script>
     (function() {
@@ -25,17 +22,18 @@
         if (idx >= CDNS.length) return;
         var s = document.createElement('script');
         s.src = CDNS[idx];
+        s.async = false;
         s.onload = function() { console.log('Tesseract.js loaded from CDN #' + (idx + 1)); };
         s.onerror = function() { idx++; tryLoad(); };
         document.head.appendChild(s);
       }
-      // 8 秒后如果还没加载成功，标记为不可用
+      // 12 秒后如果还没加载成功，标记为不可用
       setTimeout(function() {
         if (typeof Tesseract === 'undefined') {
           console.warn('Tesseract.js CDN 全部加载失败，OCR 功能不可用');
           window.TESSERACT_UNAVAILABLE = true;
         }
-      }, 8000);
+      }, 12000);
       tryLoad();
     })();
   </script>
@@ -330,6 +328,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
