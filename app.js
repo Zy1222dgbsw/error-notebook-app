@@ -726,6 +726,25 @@
     $('installGuideOverlay').addEventListener('click', function (e) {
       if (e.target === e.currentTarget) e.currentTarget.hidden = true;
     });
+    $('btnCopyLink').addEventListener('click', function () {
+      var link = 'https://5715cd46ea204e47b1bdcbcc5ca7a5bc.app.codebuddy.work';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(function () {
+          showToast('链接已复制！粘贴到手机浏览器即可打开', 'success');
+        });
+      } else {
+        // 降级方案
+        var ta = document.createElement('textarea');
+        ta.value = link;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('链接已复制！粘贴到手机浏览器即可打开', 'success');
+      }
+    });
 
     // ===== 初始 Provider 显示 =====
     const provider = localStorage.getItem('errorNotebook_aiProvider') || 'pollinations';
