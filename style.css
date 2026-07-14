@@ -1071,3 +1071,42 @@ body {
 .print-only {
   display: none;
 }
+
+/* ===== 安装指南 ===== */
+.install-section {
+  margin-bottom: 18px;
+  padding: 14px;
+  background: var(--upload-bg);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+}
+
+.install-section.install-tip {
+  border-left-color: var(--success);
+}
+
+.install-title {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.install-section.install-tip .install-title {
+  color: var(--success);
+}
+
+.install-steps {
+  margin-left: 18px;
+  line-height: 1.9;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.install-steps li {
+  margin-bottom: 4px;
+}
+
+.install-steps strong {
+  color: var(--primary);
+  font-weight: 600;
+}
