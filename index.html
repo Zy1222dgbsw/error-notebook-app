@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=3">
-  <link rel="manifest" href="manifest.json?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="manifest" href="manifest.json?v=4">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="错题本">
@@ -284,12 +286,19 @@
       <div class="modal">
         <div class="modal-header"><h3>📱 如何在手机上安装</h3><button class="btn-icon modal-close" id="btnCloseInstallGuide">✕</button></div>
         <div class="modal-body">
-          <p class="subtitle" style="margin-top:0">在手机浏览器打开本应用后，按以下步骤安装为 App：</p>
+          <div class="install-section install-tip">
+            <h4 class="install-title">🔗 手机访问地址</h4>
+            <div class="link-copy-row">
+              <code class="install-link">5715cd46ea204e47b1bdcbcc5ca7a5bc.app.codebuddy.work</code>
+              <button class="btn btn-sm btn-primary" id="btnCopyLink">📋 复制</button>
+            </div>
+            <p class="hint" style="margin-top:8px">⚠️ 请用手机上方的链接访问，直接输入域名即可（不要加 https://）</p>
+          </div>
 
           <div class="install-section">
             <h4 class="install-title">🤖 Android（安卓）</h4>
             <ol class="install-steps">
-              <li>用 <strong>Chrome 浏览器</strong> 打开本应用</li>
+              <li>用 <strong>Chrome 浏览器</strong> 打开上面那个链接</li>
               <li>点击右上角 <strong>⋮ 菜单</strong>（三个点）</li>
               <li>选择 <strong>"添加到主屏幕"</strong> 或 <strong>"安装应用"</strong></li>
               <li>确认后桌面上会出现 "智能错题本" 图标</li>
@@ -300,7 +309,7 @@
           <div class="install-section">
             <h4 class="install-title">🍎 iOS（苹果）</h4>
             <ol class="install-steps">
-              <li>用 <strong>Safari 浏览器</strong> 打开本应用（必须用 Safari）</li>
+              <li>用 <strong>Safari 浏览器</strong> 打开上面那个链接（必须用 Safari）</li>
               <li>点击底部的 <strong>分享按钮</strong> ⬆️（方框带向上箭头）</li>
               <li>向下滑动找到 <strong>"添加到主屏幕"</strong> ➕</li>
               <li>点击右上角 <strong>"添加"</strong> 确认</li>
