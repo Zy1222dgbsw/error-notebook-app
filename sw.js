@@ -1,6 +1,6 @@
 // Service Worker for 智能错题本
 // 简化版：只在网络失败时使用缓存，确保用户始终看到最新版本
-const CACHE_NAME = 'error-notebook-v5';
+const CACHE_NAME = 'error-notebook-v7';
 const ASSETS = ['.', 'index.html', 'style.css', 'app.js', 'manifest.json'];
 
 self.addEventListener('install', function (e) {
