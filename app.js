@@ -168,9 +168,6 @@
     updateFilterSelect();
     showToast('学科已更新 ✓', 'success');
   }
-    updateFilterSelect();
-    showToast('学科「' + subject.name + '」已删除', 'success');
-  }
 
   function renderSubjectList() {
     const container = $('subjectList');
