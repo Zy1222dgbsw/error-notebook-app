@@ -1,5 +1,5 @@
 // Service Worker for 智能错题本
-const CACHE_NAME = 'error-notebook-v3';
+const CACHE_NAME = 'error-notebook-v4';
 const ASSETS = [
   '.',
   'index.html',
@@ -26,15 +26,22 @@ self.addEventListener('activate', function (e) {
   );
 });
 
+// 改用 network-first 策略：每次都尝试拿新版本
 self.addEventListener('fetch', function (e) {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(function (cached) {
-      return cached || fetch(e.request).then(function (response) {
-        return caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(e.request, response.clone());
-          return response;
+    fetch(e.request)
+      .then(function (response) {
+        // 成功拿到新内容，更新缓存
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put(e.request, clone);
         });
-      });
-    })
+        return response;
+      })
+      .catch(function () {
+        // 离线时才用缓存
+        return caches.match(e.request);
+      })
   );
 });
