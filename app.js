@@ -238,7 +238,11 @@
     var modal = $('cropModal');
     var img = $('cropImage');
     if (img) { img.src = dataUrl; img.onload = function () { initCropFrame(); }; }
-    if (modal) modal.hidden = false;
+    if (modal) {
+      modal.hidden = false;
+      // 阻止事件冒泡到 uploadArea（防止触发文件选择）
+      modal.addEventListener('click', function (e) { e.stopPropagation(); });
+    }
     $('uploadPlaceholder').hidden = true;
     $('ocrSection').hidden = true;
   }
@@ -804,11 +808,37 @@
 
     // 拍照 / 上传
     var uploadArea = $('uploadArea');
-    uploadArea.addEventListener('click', function () {
+    uploadArea.addEventListener('click', function (e) {
+      // 裁剪弹窗打开时，不要触发文件选择
+      if (!$('cropModal').hidden) return;
+      // 避免点拖动引起的 click
+      if (e.target.closest('.crop-modal')) return;
       $('fileInput').click();
     });
     $('fileInput').addEventListener('change', function (e) {
       if (e.target.files.length > 0) handleImageFile(e.target.files[0]);
+    });
+
+    // 粘贴图片支持
+    document.addEventListener('paste', function (e) {
+      // 只在拍照录入 tab 时才响应粘贴
+      var scanPanel = $('panel-scan');
+      if (!scanPanel || !scanPanel.classList.contains('active')) return;
+      if (!$('cropModal').hidden) return;
+      if (!$('imagePreviewWrap').hidden) return; // 已有图片时不响应新的粘贴
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image/') === 0) {
+          var blob = items[i].getAsFile();
+          if (blob) {
+            handleImageFile(blob);
+            showToast('已粘贴剪贴板中的图片', 'success');
+            e.preventDefault();
+            return;
+          }
+        }
+      }
     });
 
     uploadArea.addEventListener('dragover', function (e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
