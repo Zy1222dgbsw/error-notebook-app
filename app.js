@@ -306,62 +306,69 @@
     const fi = $('fileInput'); if (fi) fi.value = '';
   }
 
-  // ===== OCR 识别 =====
-  let ocrWorker = null;
-  let ocrUnavailable = false;
-
+  // ===== OCR 识别（硅基流动视觉模型） =====
   function startOCR() {
-    if (ocrUnavailable) { showToast('OCR 引擎加载失败，请检查网络', 'error'); return; }
-    if (typeof Tesseract === 'undefined') { showToast('OCR 引擎尚未加载完成，请稍等', 'warning'); return; }
+    var apiKey = localStorage.getItem('errorNotebook_siliconflowKey') || localStorage.getItem('errorNotebook_apiKey') || '';
+    if (!apiKey) {
+      showToast('请先在设置中配置硅基流动 API Key', 'warning');
+      $('btnSettings').click();
+      return;
+    }
     if (!STATE.currentImage) { showToast('请先拍摄或选择图片', 'warning'); return; }
 
     $('ocrProgress').hidden = false;
     $('ocrResult').hidden = true;
-    const btn = $('btnStartOCR'); btn.disabled = true;
-    const progressFill = $('progressFill');
-    const progressText = $('progressText');
-    progressFill.style.width = '0%';
-    progressText.textContent = '正在准备...';
+    var btn = $('btnStartOCR'); btn.disabled = true;
+    var progressFill = $('progressFill');
+    var progressText = $('progressText');
+    progressFill.style.width = '30%';
+    progressText.textContent = '正在调用 AI 识别文字...';
 
-    const logger = function (m) {
-      if (m.status === 'recognizing text') {
-        const p = Math.round(m.progress * 100);
-        progressFill.style.width = p + '%';
-        progressText.textContent = '正在识别文字... ' + p + '%';
-      } else if (m.status === 'loading tesseract core') {
-        progressText.textContent = '正在加载识别引擎（首次约30MB）...';
-      } else if (m.status === 'initializing tesseract') {
-        progressText.textContent = '正在初始化中文语言包...';
-      } else if (m.status === 'loading language traineddata') {
-        progressText.textContent = '正在下载中文语言包...';
-      } else if (m.status) {
-        progressText.textContent = '处理中: ' + m.status;
+    // 提取 base64 部分（去掉 data:image/...;base64, 前缀）
+    var base64 = STATE.currentImage.split(',')[1] || STATE.currentImage;
+    var mime = STATE.currentImage.match(/data:(image\/\w+)/);
+    var imageUrl = 'data:' + (mime ? mime[1] : 'image/jpeg') + ';base64,' + base64;
+
+    fetch('https://api.siliconflow.cn/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: 'Pro/Qwen/Qwen2-VL-7B-Instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: '请识别这张图片中的所有文字内容，完整输出，保持原来的段落和换行。如果包含数学公式，请用 LaTeX 格式输出。只输出文字，不要添加任何解释。' },
+            { type: 'image_url', image_url: { url: imageUrl } }
+          ]
+        }],
+        max_tokens: 2048,
+        temperature: 0.1
+      })
+    }).then(function (r) {
+      progressFill.style.width = '70%';
+      progressText.textContent = '正在解析结果...';
+      if (!r.ok) throw new Error('API 请求失败: HTTP ' + r.status);
+      return r.json();
+    }).then(function (data) {
+      var text = '';
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        text = data.choices[0].message.content || '';
       }
-    };
-
-    const work = ocrWorker
-      ? Promise.resolve(ocrWorker)
-      : Tesseract.createWorker('chi_sim+eng', 1, { logger: logger }).then(function (w) {
-          ocrWorker = w;
-          return w.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.AUTO });
-        }).then(function () { return ocrWorker; });
-
-    work.then(function (worker) {
-      return worker.recognize(STATE.currentImage);
-    }).then(function (result) {
-      STATE.ocrResult = (result.data.text || '').trim().replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ');
-      if (!STATE.ocrResult) { showToast('未能识别到文字，请确保图片清晰', 'warning'); return; }
-      $('ocrText').textContent = STATE.ocrResult;
+      text = text.trim();
+      if (!text) { showToast('未能识别到文字，请确保图片清晰', 'warning'); return; }
+      STATE.ocrResult = text;
+      $('ocrText').textContent = text;
       $('ocrResult').hidden = false;
       $('saveSection').hidden = false;
       updateSubjectSelect();
-      showToast('文字识别完成！', 'success');
+      progressFill.style.width = '100%';
+      progressText.textContent = '识别完成！';
+      showToast('AI 文字识别完成！', 'success');
     }).catch(function (err) {
       console.error('OCR识别失败:', err);
-      if (ocrWorker) { try { ocrWorker.terminate(); } catch (e) {} ocrWorker = null; }
-      showToast('OCR识别失败：' + (err.message || err), 'error');
+      showToast('OCR识别失败：' + (err.message || '网络错误'), 'error');
     }).then(function () {
-      $('ocrProgress').hidden = true;
+      setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
       btn.disabled = false;
     });
   }
@@ -485,10 +492,18 @@
   }
 
   // ===== AI 智能解答 =====
+  function renderMarkdown(text) {
+    if (!text) return '';
+    if (typeof marked !== 'undefined' && marked.parse) {
+      try { return marked.parse(text); } catch (e) {}
+    }
+    return text.replace(/\n/g, '<br>');
+  }
+
   function askAI(errorId) {
-    const error = STATE.errors.find(function (e) { return e.id === errorId; });
+    var error = STATE.errors.find(function (e) { return e.id === errorId; });
     if (!error) return;
-    $('modalQuestion').textContent = error.ocrText;
+    $('modalQuestion').innerHTML = renderMarkdown(error.ocrText);
     $('answerContent').hidden = true;
     $('answerError').hidden = true;
     $('answerLoading').hidden = false;
@@ -512,11 +527,29 @@
   }
 
   function callAI(question) {
-    const provider = localStorage.getItem('errorNotebook_aiProvider') || 'pollinations';
-    const apiKey = localStorage.getItem('errorNotebook_apiKey') || '';
-    const customEndpoint = localStorage.getItem('errorNotebook_customEndpoint') || '';
-    const systemPrompt = '你是一位经验丰富的老师。请为学生解答这道错题。请按以下格式回答：\n1. 【正确答案】给出正确答案\n2. 【解题思路】详细解释解题步骤和思路\n3. 【知识点】列出本题涉及的关键知识点\n4. 【易错提醒】指出学生容易出错的地方\n请用中文回答。';
+    var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
+    var apiKey = localStorage.getItem('errorNotebook_siliconflowKey') || localStorage.getItem('errorNotebook_apiKey') || '';
+    var customEndpoint = localStorage.getItem('errorNotebook_customEndpoint') || '';
+    var systemPrompt = '你是一位经验丰富的老师。请为学生解答这道错题。请按以下 Markdown 格式回答：\n\n## 正确答案\n给出正确答案\n\n## 解题思路\n详细解释解题步骤和思路\n\n## 知识点\n列出本题涉及的关键知识点\n\n## 易错提醒\n指出学生容易出错的地方\n\n请用中文回答。涉及数学公式请用 LaTeX 语法（如 $x^2$），代码用反引号包裹。';
 
+    // 硅基流动
+    if (provider === 'siliconflow') {
+      if (!apiKey) return Promise.resolve(generateFallbackAnswer(question));
+      return fetch('https://api.siliconflow.cn/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: 'Pro/Qwen/Qwen2-7B-Instruct',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: question }],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      }).then(function (r) { return r.json(); })
+        .then(function (data) { return data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content; })
+        .catch(function () { return generateFallbackAnswer(question); });
+    }
+
+    // DeepSeek
     if (provider === 'deepseek') {
       if (!apiKey) return Promise.resolve(generateFallbackAnswer(question));
       return fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -566,34 +599,52 @@
   }
 
   function generateFallbackAnswer(question) {
-    return '【温馨提示】\nAI服务暂时不可用。请尝试：\n1. 检查网络连接\n2. 在「设置」中配置 DeepSeek API 密钥\n\n【题目内容】\n' + question + '\n\n【建议】翻看课本对应章节或与同学讨论。';
+    return '## 温馨提示\n\nAI服务暂时不可用。请尝试：\n\n1. 检查网络连接\n2. 在「设置」中配置硅基流动 API 密钥\n3. 访问 [cloud.siliconflow.cn](https://cloud.siliconflow.cn) 注册并获取密钥\n\n---\n\n**题目内容**\n\n' + question + '\n\n---\n\n**建议**：翻看课本对应章节或与同学讨论。';
   }
 
   function formatAIAnswer(text) {
-    return String(text)
-      .replace(/【(.+?)】/g, '<h3>【$1】</h3>')
-      .replace(/\n/g, '<br>')
-      .replace(/(\d+)\.\s/g, '<br>$1. ');
+    var html = String(text);
+    // 1. 用 marked 转 Markdown → HTML
+    if (typeof marked !== 'undefined' && marked.parse) {
+      try { html = marked.parse(html); } catch (e) { /* 降级 */ }
+    } else {
+      // 降级：简单换行 + 标题转换
+      html = html
+        .replace(/## (.+)/g, '<h3>$1</h3>')
+        .replace(/\n/g, '<br>');
+    }
+    // 2. KaTeX 渲染数学公式
+    if (typeof renderMathInElement !== 'undefined') {
+      setTimeout(function () {
+        var el = $('answerContent');
+        if (el) {
+          try { renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] }); } catch (e) {}
+        }
+      }, 50);
+    }
+    return html;
   }
 
   // ===== 弹窗控制 =====
   function openSettings() {
-    const provider = localStorage.getItem('errorNotebook_aiProvider') || 'pollinations';
+    var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
     $('aiProvider').value = provider;
-    $('apiKey').value = localStorage.getItem('errorNotebook_apiKey') || '';
+    $('apiKey').value = localStorage.getItem('errorNotebook_siliconflowKey') || localStorage.getItem('errorNotebook_apiKey') || '';
     $('customEndpoint').value = localStorage.getItem('errorNotebook_customEndpoint') || '';
     toggleProviderFields(provider);
     $('settingsOverlay').hidden = false;
   }
 
   function toggleProviderFields(provider) {
-    $('apiKeyGroup').hidden = (provider === 'pollinations');
+    $('apiKeyGroup').hidden = false;
     $('customEndpointGroup').hidden = (provider !== 'custom');
   }
 
   function saveSettings() {
     localStorage.setItem('errorNotebook_aiProvider', $('aiProvider').value);
-    localStorage.setItem('errorNotebook_apiKey', $('apiKey').value.trim());
+    var apiKey = $('apiKey').value.trim();
+    localStorage.setItem('errorNotebook_siliconflowKey', apiKey);
+    localStorage.setItem('errorNotebook_apiKey', apiKey);
     localStorage.setItem('errorNotebook_customEndpoint', $('customEndpoint').value.trim());
     $('settingsOverlay').hidden = true;
     showToast('设置已保存', 'success');
@@ -747,7 +798,8 @@
     });
 
     // ===== 初始 Provider 显示 =====
-    const provider = localStorage.getItem('errorNotebook_aiProvider') || 'pollinations';
+    var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
+    $('aiProvider').value = provider;
     $('aiProvider').value = provider;
     toggleProviderFields(provider);
 
