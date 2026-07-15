@@ -218,7 +218,9 @@
     }).join('');
   }
 
-  // ===== 拍照 / 上传 + 裁剪 =====
+  // ===== 拍照 / 上传 + 全屏裁剪 =====
+  var cropCtx = null;
+
   function handleImageFile(file) {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       showToast('请选择图片文件', 'error'); return;
@@ -227,125 +229,186 @@
     reader.onload = function (e) {
       STATE.currentImage = e.target.result;
       STATE.cropSelection = null;
-      showImagePreview(e.target.result);
+      openCropModal(e.target.result);
     };
     reader.readAsDataURL(file);
   }
 
-  function showImagePreview(dataUrl) {
-    var img = $('imagePreview');
-    var wrap = $('imagePreviewWrap');
-    var toolbar = $('cropToolbar');
-    if (img) { img.src = dataUrl; img.style.display = 'block'; }
-    if (wrap) wrap.hidden = false;
-    if (toolbar) toolbar.hidden = false;
+  function openCropModal(dataUrl) {
+    var modal = $('cropModal');
+    var img = $('cropImage');
+    if (img) { img.src = dataUrl; img.onload = function () { initCropFrame(); }; }
+    if (modal) modal.hidden = false;
     $('uploadPlaceholder').hidden = true;
     $('ocrSection').hidden = true;
-    clearCropCanvas();
   }
 
-  // ===== 图片裁剪 =====
-  function clearCropCanvas() {
-    var canvas = $('cropCanvas');
-    if (canvas) { canvas.hidden = true; canvas.width = 1; canvas.height = 1; }
-    STATE.cropSelection = null;
+  function closeCropModal() {
+    var modal = $('cropModal');
+    if (modal) modal.hidden = true;
   }
 
-  function startCrop() {
-    var img = $('imagePreview');
-    var canvas = $('cropCanvas');
-    if (!img || !img.complete || !img.naturalWidth) return;
+  function initCropFrame() {
+    var img = $('cropImage');
+    var frame = $('cropFrame');
+    var stage = $('cropStage');
+    if (!img || !frame || !stage) return;
 
-    // 同步 canvas 尺寸到图片显示尺寸
-    var rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    canvas.style.position = 'absolute';
-    canvas.style.top = img.offsetTop + 'px';
-    canvas.style.left = img.offsetLeft + 'px';
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
-    canvas.style.cursor = 'crosshair';
-    canvas.style.zIndex = '2';
-    canvas.hidden = false;
+    // 等下一帧让布局稳定
+    requestAnimationFrame(function () {
+      var ir = img.getBoundingClientRect();
+      var sr = stage.getBoundingClientRect();
+      // 图片在 stage 内的实际显示区域（图片可能居中，四周留白）
+      var imgLeft = ir.left - sr.left;
+      var imgTop = ir.top - sr.top;
+      var imgW = ir.width;
+      var imgH = ir.height;
 
-    // 绘制半透明遮罩
-    var ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // 默认裁剪框：占图片 80% 区域，居中
+      var padX = imgW * 0.10;
+      var padY = imgH * 0.10;
+      STATE.cropSelection = {
+        x: imgLeft + padX,
+        y: imgTop + padY,
+        w: imgW - padX * 2,
+        h: imgH - padY * 2
+      };
+      updateCropFrame();
+    });
+  }
 
-    var startX, startY, isDrawing = false;
+  function updateCropFrame() {
+    var frame = $('cropFrame');
     var sel = STATE.cropSelection;
-
-    function getPos(e) {
-      var cr = canvas.getBoundingClientRect();
-      var x = (e.touches ? e.touches[0].clientX : e.clientX) - cr.left;
-      var y = (e.touches ? e.touches[0].clientY : e.clientY) - cr.top;
-      return { x: Math.max(0, Math.min(x, canvas.width)), y: Math.max(0, Math.min(y, canvas.height)) };
-    }
-
-    function onDown(e) {
-      e.preventDefault();
-      var p = getPos(e);
-      startX = p.x; startY = p.y;
-      isDrawing = true;
-    }
-
-    function onMove(e) {
-      if (!isDrawing) return;
-      e.preventDefault();
-      var p = getPos(e);
-      var x1 = Math.min(startX, p.x), y1 = Math.min(startY, p.y);
-      var x2 = Math.max(startX, p.x), y2 = Math.max(startY, p.y);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.clearRect(x1, y1, x2 - x1, y2 - y1);
-      // 边框
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 3]);
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-      ctx.setLineDash([]);
-      sel = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-    }
-
-    function onUp() {
-      isDrawing = false;
-      STATE.cropSelection = sel && sel.w > 10 && sel.h > 10 ? sel : null;
-    }
-
-    // 清除旧事件（简化处理：每次都重新设置）
-    canvas.onpointerdown = onDown;
-    canvas.onpointermove = onMove;
-    canvas.onpointerup = onUp;
-    canvas.ontouchstart = onDown;
-    canvas.ontouchmove = onMove;
-    canvas.ontouchend = onUp;
-
-    $('btnApplyCrop').onclick = applyCrop;
-    $('btnCancelCrop').onclick = cancelCrop;
+    if (!frame || !sel) return;
+    frame.style.left = sel.x + 'px';
+    frame.style.top = sel.y + 'px';
+    frame.style.width = sel.w + 'px';
+    frame.style.height = sel.h + 'px';
   }
+
+  function bindCropDrag() {
+    var stage = $('cropStage');
+    var frame = $('cropFrame');
+    if (!stage || !frame) return;
+
+    // 移动整个 frame
+    function onFrameDown(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var p = getStagePos(e);
+      var sel = STATE.cropSelection;
+      var ox = p.x - sel.x, oy = p.y - sel.y;
+
+      function move(ev) {
+        var p2 = getStagePos(ev);
+        var imgRect = getImgRect();
+        sel.x = Math.max(imgRect.left, Math.min(p2.x - ox, imgRect.left + imgRect.w - sel.w));
+        sel.y = Math.max(imgRect.top, Math.min(p2.y - oy, imgRect.top + imgRect.h - sel.h));
+        updateCropFrame();
+      }
+      function up() {
+        stage.removeEventListener('pointermove', move);
+        stage.removeEventListener('pointerup', up);
+      }
+      stage.addEventListener('pointermove', move);
+      stage.addEventListener('pointerup', up);
+    }
+    frame.addEventListener('pointerdown', onFrameDown);
+
+    // 拖拽四角
+    $$('.crop-corner').forEach(function (corner) {
+      var which = corner.dataset.corner;
+      corner.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var p = getStagePos(e);
+        var start = { x: p.x, y: p.y, sel: JSON.parse(JSON.stringify(STATE.cropSelection)) };
+        var imgRect = getImgRect();
+
+        function move(ev) {
+          var p2 = getStagePos(ev);
+          var dx = p2.x - start.x, dy = p2.y - start.y;
+          var s = start.sel;
+          var ns = { x: s.x, y: s.y, w: s.w, h: s.h };
+          var minSize = 50;
+
+          if (which === 'tl') {
+            ns.x = clamp(s.x + dx, imgRect.left, s.x + s.w - minSize);
+            ns.y = clamp(s.y + dy, imgRect.top, s.y + s.h - minSize);
+            ns.w = s.w - (ns.x - s.x);
+            ns.h = s.h - (ns.y - s.y);
+          } else if (which === 'tr') {
+            ns.y = clamp(s.y + dy, imgRect.top, s.y + s.h - minSize);
+            ns.w = clamp(s.w + dx, minSize, imgRect.left + imgRect.w - s.x);
+            ns.h = s.h - (ns.y - s.y);
+          } else if (which === 'bl') {
+            ns.x = clamp(s.x + dx, imgRect.left, s.x + s.w - minSize);
+            ns.w = s.w - (ns.x - s.x);
+            ns.h = clamp(s.h + dy, minSize, imgRect.top + imgRect.h - s.y);
+          } else if (which === 'br') {
+            ns.w = clamp(s.w + dx, minSize, imgRect.left + imgRect.w - s.x);
+            ns.h = clamp(s.h + dy, minSize, imgRect.top + imgRect.h - s.y);
+          }
+          STATE.cropSelection = ns;
+          updateCropFrame();
+        }
+        function up() {
+          stage.removeEventListener('pointermove', move);
+          stage.removeEventListener('pointerup', up);
+        }
+        stage.addEventListener('pointermove', move);
+        stage.addEventListener('pointerup', up);
+      });
+    });
+
+    // 裁剪框底部按钮
+    $('cropCancel').addEventListener('click', cancelCrop);
+    $('cropConfirm').addEventListener('click', applyCrop);
+  }
+
+  function getStagePos(e) {
+    var stage = $('cropStage');
+    var r = stage.getBoundingClientRect();
+    var c = e.touches && e.touches[0] ? e.touches[0] : e;
+    return { x: c.clientX - r.left, y: c.clientY - r.top };
+  }
+
+  function getImgRect() {
+    var img = $('cropImage');
+    var stage = $('cropStage');
+    var ir = img.getBoundingClientRect();
+    var sr = stage.getBoundingClientRect();
+    return { left: ir.left - sr.left, top: ir.top - sr.top, w: ir.width, h: ir.height };
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
   function applyCrop() {
     var sel = STATE.cropSelection;
-    if (!sel) { showToast('请先在图片上拖动框选区域', 'warning'); return; }
-    var img = $('imagePreview');
-    var canvas = $('cropCanvas');
-    var scaleX = img.naturalWidth / canvas.width;
-    var scaleY = img.naturalHeight / canvas.height;
+    var img = $('cropImage');
+    if (!sel || !img || !img.naturalWidth) {
+      showToast('请先调整裁剪区域', 'warning'); return;
+    }
+    var imgRect = getImgRect();
+    var scaleX = img.naturalWidth / imgRect.w;
+    var scaleY = img.naturalHeight / imgRect.h;
+
+    var cropX = (sel.x - imgRect.left) * scaleX;
+    var cropY = (sel.y - imgRect.top) * scaleY;
+    var cropW = sel.w * scaleX;
+    var cropH = sel.h * scaleY;
 
     var outCanvas = document.createElement('canvas');
-    outCanvas.width = sel.w * scaleX;
-    outCanvas.height = sel.h * scaleY;
-    outCanvas.getContext('2d').drawImage(img, sel.x * scaleX, sel.y * scaleY, sel.w * scaleX, sel.h * scaleY, 0, 0, sel.w * scaleX, sel.h * scaleY);
+    outCanvas.width = cropW;
+    outCanvas.height = cropH;
+    outCanvas.getContext('2d').drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     STATE.currentImage = outCanvas.toDataURL('image/jpeg', 0.9);
-    STATE.cropSelection = null;
-    img.src = STATE.currentImage;
-    clearCropCanvas();
-    $('cropToolbar').hidden = true;
+    var preview = $('imagePreview');
+    if (preview) preview.src = STATE.currentImage;
+    closeCropModal();
+    $('imagePreviewWrap').hidden = false;
     $('ocrSection').hidden = false;
     $('ocrResult').hidden = true;
     $('ocrProgress').hidden = true;
@@ -354,8 +417,11 @@
   }
 
   function cancelCrop() {
-    clearCropCanvas();
-    $('cropToolbar').hidden = true;
+    closeCropModal();
+    // 取消 → 用原图直接进入 OCR
+    var preview = $('imagePreview');
+    if (preview) preview.src = STATE.currentImage;
+    $('imagePreviewWrap').hidden = false;
     $('ocrSection').hidden = false;
     $('ocrResult').hidden = true;
     $('ocrProgress').hidden = true;
@@ -366,6 +432,7 @@
     STATE.currentImage = null;
     STATE.cropSelection = null;
     STATE.ocrResult = '';
+    closeCropModal();
     var img = $('imagePreview');
     if (img) img.src = '';
     $('imagePreviewWrap').hidden = true;
@@ -374,8 +441,6 @@
     $('saveSection').hidden = true;
     $('ocrResult').hidden = true;
     $('ocrProgress').hidden = true;
-    $('cropToolbar').hidden = true;
-    clearCropCanvas();
     var fi = $('fileInput'); if (fi) fi.value = '';
   }
 
@@ -753,10 +818,8 @@
       if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
     });
 
-    // 图片加载完毕 → 启动裁剪模式
-    $('imagePreview').addEventListener('load', function () {
-      setTimeout(function () { startCrop(); }, 100);
-    });
+    // 裁剪弹窗的拖拽逻辑
+    bindCropDrag();
 
     // OCR
     $('btnStartOCR').addEventListener('click', startOCR);
