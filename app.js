@@ -12,8 +12,8 @@
     subjects: [],
     errors: [],
     currentImage: null,
-    ocrResult: '',
-    cameraStream: null
+    cropSelection: null,
+    ocrResult: ''
   };
 
   const DEFAULT_SUBJECTS = [
@@ -218,92 +218,165 @@
     }).join('');
   }
 
-  // ===== 拍照 / 上传 =====
+  // ===== 拍照 / 上传 + 裁剪 =====
   function handleImageFile(file) {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       showToast('请选择图片文件', 'error'); return;
     }
-    stopCamera();
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.onload = function (e) {
       STATE.currentImage = e.target.result;
-      const img = $('imagePreview');
-      if (img) { img.src = e.target.result; img.hidden = false; }
-      $('uploadPlaceholder').hidden = true;
-      $('cameraPreview').hidden = true;
-      $('ocrSection').hidden = false;
-      $('ocrResult').hidden = true;
-      $('ocrProgress').hidden = true;
-      $('saveSection').hidden = true;
+      STATE.cropSelection = null;
+      showImagePreview(e.target.result);
     };
     reader.readAsDataURL(file);
   }
 
-  function startCamera() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast('当前浏览器不支持摄像头，请使用选择图片功能', 'error'); return;
-    }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(function (stream) {
-        STATE.cameraStream = stream;
-        const video = $('cameraPreview');
-        video.srcObject = stream;
-        video.hidden = false;
-        $('uploadPlaceholder').hidden = true;
-        $('imagePreview').hidden = true;
-        $('btnTakePhoto').hidden = true;
-        $('btnPickFile').hidden = true;
-        $('btnRetake').hidden = false;
-      })
-      .catch(function (err) {
-        console.error('摄像头启动失败:', err);
-        showToast('无法访问摄像头：' + (err.message || err.name), 'error');
-      });
+  function showImagePreview(dataUrl) {
+    var img = $('imagePreview');
+    var wrap = $('imagePreviewWrap');
+    var toolbar = $('cropToolbar');
+    if (img) { img.src = dataUrl; img.style.display = 'block'; }
+    if (wrap) wrap.hidden = false;
+    if (toolbar) toolbar.hidden = false;
+    $('uploadPlaceholder').hidden = true;
+    $('ocrSection').hidden = true;
+    clearCropCanvas();
   }
 
-  function capturePhoto() {
-    const video = $('cameraPreview');
-    const canvas = $('cameraCanvas');
-    if (!video.videoWidth) { showToast('摄像头未就绪', 'error'); return; }
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    STATE.currentImage = canvas.toDataURL('image/jpeg', 0.9);
-    stopCamera();
-    $('imagePreview').src = STATE.currentImage;
-    $('imagePreview').hidden = false;
-    $('uploadPlaceholder').hidden = true;
-    $('cameraPreview').hidden = true;
+  // ===== 图片裁剪 =====
+  function clearCropCanvas() {
+    var canvas = $('cropCanvas');
+    if (canvas) { canvas.hidden = true; canvas.width = 1; canvas.height = 1; }
+    STATE.cropSelection = null;
+  }
+
+  function startCrop() {
+    var img = $('imagePreview');
+    var canvas = $('cropCanvas');
+    if (!img || !img.complete || !img.naturalWidth) return;
+
+    // 同步 canvas 尺寸到图片显示尺寸
+    var rect = img.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    canvas.style.position = 'absolute';
+    canvas.style.top = img.offsetTop + 'px';
+    canvas.style.left = img.offsetLeft + 'px';
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    canvas.style.cursor = 'crosshair';
+    canvas.style.zIndex = '2';
+    canvas.hidden = false;
+
+    // 绘制半透明遮罩
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var startX, startY, isDrawing = false;
+    var sel = STATE.cropSelection;
+
+    function getPos(e) {
+      var cr = canvas.getBoundingClientRect();
+      var x = (e.touches ? e.touches[0].clientX : e.clientX) - cr.left;
+      var y = (e.touches ? e.touches[0].clientY : e.clientY) - cr.top;
+      return { x: Math.max(0, Math.min(x, canvas.width)), y: Math.max(0, Math.min(y, canvas.height)) };
+    }
+
+    function onDown(e) {
+      e.preventDefault();
+      var p = getPos(e);
+      startX = p.x; startY = p.y;
+      isDrawing = true;
+    }
+
+    function onMove(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      var p = getPos(e);
+      var x1 = Math.min(startX, p.x), y1 = Math.min(startY, p.y);
+      var x2 = Math.max(startX, p.x), y2 = Math.max(startY, p.y);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(x1, y1, x2 - x1, y2 - y1);
+      // 边框
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      ctx.setLineDash([]);
+      sel = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+    }
+
+    function onUp() {
+      isDrawing = false;
+      STATE.cropSelection = sel && sel.w > 10 && sel.h > 10 ? sel : null;
+    }
+
+    // 清除旧事件（简化处理：每次都重新设置）
+    canvas.onpointerdown = onDown;
+    canvas.onpointermove = onMove;
+    canvas.onpointerup = onUp;
+    canvas.ontouchstart = onDown;
+    canvas.ontouchmove = onMove;
+    canvas.ontouchend = onUp;
+
+    $('btnApplyCrop').onclick = applyCrop;
+    $('btnCancelCrop').onclick = cancelCrop;
+  }
+
+  function applyCrop() {
+    var sel = STATE.cropSelection;
+    if (!sel) { showToast('请先在图片上拖动框选区域', 'warning'); return; }
+    var img = $('imagePreview');
+    var canvas = $('cropCanvas');
+    var scaleX = img.naturalWidth / canvas.width;
+    var scaleY = img.naturalHeight / canvas.height;
+
+    var outCanvas = document.createElement('canvas');
+    outCanvas.width = sel.w * scaleX;
+    outCanvas.height = sel.h * scaleY;
+    outCanvas.getContext('2d').drawImage(img, sel.x * scaleX, sel.y * scaleY, sel.w * scaleX, sel.h * scaleY, 0, 0, sel.w * scaleX, sel.h * scaleY);
+
+    STATE.currentImage = outCanvas.toDataURL('image/jpeg', 0.9);
+    STATE.cropSelection = null;
+    img.src = STATE.currentImage;
+    clearCropCanvas();
+    $('cropToolbar').hidden = true;
+    $('ocrSection').hidden = false;
+    $('ocrResult').hidden = true;
+    $('ocrProgress').hidden = true;
+    $('saveSection').hidden = true;
+    showToast('裁剪完成，点击「开始识别」提取文字', 'success');
+  }
+
+  function cancelCrop() {
+    clearCropCanvas();
+    $('cropToolbar').hidden = true;
     $('ocrSection').hidden = false;
     $('ocrResult').hidden = true;
     $('ocrProgress').hidden = true;
     $('saveSection').hidden = true;
   }
 
-  function stopCamera() {
-    if (STATE.cameraStream) {
-      STATE.cameraStream.getTracks().forEach(function (t) { t.stop(); });
-      STATE.cameraStream = null;
-    }
-    const video = $('cameraPreview');
-    if (video) { video.srcObject = null; video.hidden = true; }
-    $('uploadPlaceholder').hidden = false;
-    $('btnTakePhoto').hidden = false;
-    $('btnPickFile').hidden = false;
-    $('btnRetake').hidden = true;
-  }
-
   function resetUpload() {
-    stopCamera();
     STATE.currentImage = null;
+    STATE.cropSelection = null;
     STATE.ocrResult = '';
-    $('imagePreview').hidden = true;
+    var img = $('imagePreview');
+    if (img) img.src = '';
+    $('imagePreviewWrap').hidden = true;
     $('uploadPlaceholder').hidden = false;
     $('ocrSection').hidden = true;
     $('saveSection').hidden = true;
     $('ocrResult').hidden = true;
     $('ocrProgress').hidden = true;
-    const fi = $('fileInput'); if (fi) fi.value = '';
+    $('cropToolbar').hidden = true;
+    clearCropCanvas();
+    var fi = $('fileInput'); if (fi) fi.value = '';
   }
 
   // ===== OCR 识别（硅基流动视觉模型） =====
@@ -665,21 +738,24 @@
     });
 
     // 拍照 / 上传
-    $('btnTakePhoto').addEventListener('click', startCamera);
-    $('btnPickFile').addEventListener('click', function () {
+    var uploadArea = $('uploadArea');
+    uploadArea.addEventListener('click', function () {
       $('fileInput').click();
     });
     $('fileInput').addEventListener('change', function (e) {
       if (e.target.files.length > 0) handleImageFile(e.target.files[0]);
     });
-    $('btnRetake').addEventListener('click', resetUpload);
 
-    var uploadArea = $('uploadArea');
     uploadArea.addEventListener('dragover', function (e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
     uploadArea.addEventListener('dragleave', function () { uploadArea.classList.remove('drag-over'); });
     uploadArea.addEventListener('drop', function (e) {
       e.preventDefault(); uploadArea.classList.remove('drag-over');
       if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
+    });
+
+    // 图片加载完毕 → 启动裁剪模式
+    $('imagePreview').addEventListener('load', function () {
+      setTimeout(function () { startCrop(); }, 100);
     });
 
     // OCR
