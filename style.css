@@ -350,51 +350,136 @@ body {
 
 #imagePreview {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 200px;
   border-radius: var(--radius-sm);
-  cursor: crosshair;
   display: block;
 }
 
 #imagePreviewWrap {
   margin-top: 12px;
+}
+
+/* ===== 裁剪弹窗 ===== */
+.crop-modal {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  touch-action: none;
+}
+
+.crop-stage {
+  flex: 1;
   position: relative;
-  display: inline-block;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
 }
 
-#cropCanvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-}
-
-/* 裁剪遮罩 */
-.crop-mask {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.5);
+#cropImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
   pointer-events: none;
 }
 
-.crop-box {
-  position: absolute;
-  border: 2px dashed #fff;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-  cursor: move;
+.crop-mask {
+  display: none; /* 通过 frame 的 box-shadow 实现 */
 }
 
-.crop-toolbar {
+.crop-frame {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+  background: transparent;
+}
+
+.crop-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.crop-corner::before,
+.crop-corner::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.crop-corner::before {
+  width: 100%;
+  height: 3px;
+}
+
+.crop-corner::after {
+  width: 3px;
+  height: 100%;
+}
+
+.crop-corner-tl { top: -2px; left: -2px; cursor: nwse-resize; }
+.crop-corner-tl::before { top: 0; left: 0; }
+.crop-corner-tl::after { top: 0; left: 0; }
+
+.crop-corner-tr { top: -2px; right: -2px; cursor: nesw-resize; }
+.crop-corner-tr::before { top: 0; right: 0; }
+.crop-corner-tr::after { top: 0; right: 0; }
+
+.crop-corner-bl { bottom: -2px; left: -2px; cursor: nesw-resize; }
+.crop-corner-bl::before { bottom: 0; left: 0; }
+.crop-corner-bl::after { bottom: 0; left: 0; }
+
+.crop-corner-br { bottom: -2px; right: -2px; cursor: nwse-resize; }
+.crop-corner-br::before { bottom: 0; right: 0; }
+.crop-corner-br::after { bottom: 0; right: 0; }
+
+.crop-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #000;
+}
+
+.crop-btn {
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 12px 24px;
+  border-radius: 24px;
+  transition: opacity 0.2s;
+}
+
+.crop-btn:active { opacity: 0.6; }
+
+.crop-btn-icon {
+  font-size: 22px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0;
 }
 
-.crop-hint {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-right: auto;
+.crop-btn-primary {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  min-width: 100px;
 }
 
 .subject-form-row {
