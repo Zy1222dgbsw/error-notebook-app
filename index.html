@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=5">
-  <link rel="manifest" href="manifest.json?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="manifest" href="manifest.json?v=6">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
@@ -51,32 +51,19 @@
           <div class="upload-area" id="uploadArea">
             <div class="upload-placeholder" id="uploadPlaceholder">
               <span class="upload-icon">📷</span>
-              <p>点击下方按钮拍照或选择图片</p>
-              <p class="upload-hint">也支持拖拽图片到此处</p>
+              <p>点击此处拍照或选择图片</p>
+              <p class="upload-hint">支持 JPG / PNG，也支持拖拽图片到此处</p>
             </div>
-            <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
             <input type="file" id="fileInput" accept="image/*" hidden>
-            <video id="cameraPreview" autoplay playsinline hidden></video>
-            <canvas id="cameraCanvas" hidden></canvas>
-            <img id="imagePreview" alt="预览" hidden>
-          </div>
-
-          <div class="upload-actions">
-            <button class="btn btn-camera" id="btnTakePhoto">
-              <span class="btn-icon-inline">📷</span>
-              <span class="btn-label">
-                <strong>拍照</strong>
-                <small>使用摄像头</small>
-              </span>
-            </button>
-            <button class="btn btn-gallery" id="btnPickFile">
-              <span class="btn-icon-inline">🖼️</span>
-              <span class="btn-label">
-                <strong>相册</strong>
-                <small>从本地选择</small>
-              </span>
-            </button>
-            <button class="btn btn-secondary" id="btnRetake" hidden>🔄 重新拍摄</button>
+            <div id="imagePreviewWrap" hidden>
+              <img id="imagePreview" alt="预览">
+              <canvas id="cropCanvas" hidden></canvas>
+              <div class="crop-toolbar" id="cropToolbar" hidden>
+                <span class="crop-hint">拖动鼠标/手指框选区域</span>
+                <button class="btn btn-sm btn-primary" id="btnApplyCrop">✂️ 确认裁剪</button>
+                <button class="btn btn-sm btn-secondary" id="btnCancelCrop">取消</button>
+              </div>
+            </div>
           </div>
 
           <div id="ocrSection" class="ocr-section" hidden>
@@ -316,6 +303,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
