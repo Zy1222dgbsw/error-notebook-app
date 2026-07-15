@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=11">
-  <link rel="manifest" href="manifest.json?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="manifest" href="manifest.json?v=12">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
@@ -226,7 +226,10 @@
             <label>API 密钥（硅基流动 / DeepSeek）：</label>
             <input type="password" id="apiKey" class="form-input" placeholder="输入 API Key">
             <p class="hint">硅基流动注册：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a></p>
+            <p class="hint" style="color:var(--danger);margin-top:6px">⚠️ 若 API 报错 "Model disabled"，说明你的账户无法使用该模型。<br>请去 <a href="https://cloud.siliconflow.cn/models" target="_blank">模型列表</a> 找一个可用的视觉模型，或启用对应模型权限。</p>
           </div>
+          <button class="btn btn-secondary" id="btnTestApi" type="button" style="margin-bottom:12px">🔧 测试 API Key</button>
+          <div id="apiTestResult" class="hint" style="display:none;white-space:pre-wrap;max-height:200px;overflow:auto;background:var(--upload-bg);padding:8px;border-radius:6px"></div>
           <div class="form-group" id="customEndpointGroup" hidden>
             <label>自定义接口地址：</label>
             <input type="text" id="customEndpoint" class="form-input" placeholder="https://your-api.com/v1/chat">
@@ -318,6 +321,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
