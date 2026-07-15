@@ -359,6 +359,23 @@ body {
   margin-top: 12px;
 }
 
+.image-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--upload-bg);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.image-preview-header .btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 /* ===== 裁剪弹窗 ===== */
 .crop-modal {
   position: fixed;
