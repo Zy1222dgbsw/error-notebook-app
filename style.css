@@ -838,13 +838,42 @@ body {
 .answer-content {
   font-size: 15px;
   line-height: 1.9;
-  white-space: pre-wrap;
+}
+
+.answer-content h2 {
+  font-size: 17px;
+  margin: 16px 0 8px;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
 }
 
 .answer-content h3 {
   font-size: 16px;
-  margin: 16px 0 8px;
+  margin: 14px 0 8px;
   color: var(--primary);
+}
+
+.answer-content p { margin: 8px 0; }
+.answer-content ul, .answer-content ol { padding-left: 20px; margin: 8px 0; }
+.answer-content li { margin-bottom: 4px; }
+.answer-content code {
+  background: var(--upload-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+}
+.answer-content pre {
+  background: var(--upload-bg);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: 13px;
+}
+.answer-content .katex-display {
+  margin: 12px 0;
+  overflow-x: auto;
 }
 
 .answer-error {
