@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=6">
-  <link rel="manifest" href="manifest.json?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="manifest" href="manifest.json?v=7">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
@@ -57,12 +57,23 @@
             <input type="file" id="fileInput" accept="image/*" hidden>
             <div id="imagePreviewWrap" hidden>
               <img id="imagePreview" alt="预览">
-              <canvas id="cropCanvas" hidden></canvas>
-              <div class="crop-toolbar" id="cropToolbar" hidden>
-                <span class="crop-hint">拖动鼠标/手指框选区域</span>
-                <button class="btn btn-sm btn-primary" id="btnApplyCrop">✂️ 确认裁剪</button>
-                <button class="btn btn-sm btn-secondary" id="btnCancelCrop">取消</button>
+            </div>
+          </div>
+
+          <!-- 裁剪弹窗（全屏式） -->
+          <div class="crop-modal" id="cropModal" hidden>
+            <div class="crop-stage" id="cropStage">
+              <img id="cropImage" alt="待裁剪">
+              <div class="crop-frame" id="cropFrame">
+                <span class="crop-corner crop-corner-tl" data-corner="tl"></span>
+                <span class="crop-corner crop-corner-tr" data-corner="tr"></span>
+                <span class="crop-corner crop-corner-bl" data-corner="bl"></span>
+                <span class="crop-corner crop-corner-br" data-corner="br"></span>
               </div>
+            </div>
+            <div class="crop-actions">
+              <button class="crop-btn crop-btn-icon" id="cropCancel">✕</button>
+              <button class="crop-btn crop-btn-primary" id="cropConfirm">确认</button>
             </div>
           </div>
 
@@ -303,6 +314,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
