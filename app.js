@@ -471,6 +471,37 @@
     var mime = STATE.currentImage.match(/data:(image\/\w+)/);
     var imageUrl = 'data:' + (mime ? mime[1] : 'image/jpeg') + ';base64,' + base64;
 
+    // 如果图片过大（>2MB base64），压缩后再发送
+    if (imageUrl.length > 2 * 1024 * 1024) {
+      progressText.textContent = '图片过大，正在压缩...';
+      compressImage(STATE.currentImage, 1600, 0.85, function (compressedDataUrl) {
+        var cb64 = compressedDataUrl.split(',')[1] || compressedDataUrl;
+        var cmime = compressedDataUrl.match(/data:(image\/\w+)/);
+        var cImageUrl = 'data:' + (cmime ? cmime[1] : 'image/jpeg') + ';base64,' + cb64;
+        callSiliconFlowOCR(apiKey, cImageUrl, progressFill, progressText, btn);
+      });
+      return;
+    }
+
+    callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn);
+  }
+
+  // 压缩图片到指定最大宽
+  function compressImage(dataUrl, maxWidth, quality, callback) {
+    var img = new Image();
+    img.onload = function () {
+      var scale = Math.min(1, maxWidth / img.naturalWidth);
+      var w = img.naturalWidth * scale;
+      var h = img.naturalHeight * scale;
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  }
+
+  function callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn) {
     fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -489,7 +520,11 @@
     }).then(function (r) {
       progressFill.style.width = '70%';
       progressText.textContent = '正在解析结果...';
-      if (!r.ok) throw new Error('API 请求失败: HTTP ' + r.status);
+      if (!r.ok) {
+        return r.text().then(function (txt) {
+          throw new Error('HTTP ' + r.status + ' - ' + (txt || r.statusText));
+        });
+      }
       return r.json();
     }).then(function (data) {
       var text = '';
@@ -508,7 +543,9 @@
       showToast('AI 文字识别完成！', 'success');
     }).catch(function (err) {
       console.error('OCR识别失败:', err);
-      showToast('OCR识别失败：' + (err.message || '网络错误'), 'error');
+      var msg = (err.message || '网络错误').substring(0, 200);
+      showToast('OCR识别失败：' + msg, 'error');
+      progressText.textContent = '识别失败：' + msg;
     }).then(function () {
       setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
       btn.disabled = false;
