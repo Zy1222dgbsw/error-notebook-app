@@ -471,13 +471,14 @@
     var mime = STATE.currentImage.match(/data:(image\/\w+)/);
     var imageUrl = 'data:' + (mime ? mime[1] : 'image/jpeg') + ';base64,' + base64;
 
-    // 如果图片过大（>2MB base64），压缩后再发送
-    if (imageUrl.length > 2 * 1024 * 1024) {
+    // 如果图片过大（>1MB base64），压缩后再发送
+    if (imageUrl.length > 1 * 1024 * 1024) {
       progressText.textContent = '图片过大，正在压缩...';
-      compressImage(STATE.currentImage, 1600, 0.85, function (compressedDataUrl) {
+      compressImage(STATE.currentImage, 1280, 0.75, function (compressedDataUrl) {
         var cb64 = compressedDataUrl.split(',')[1] || compressedDataUrl;
         var cmime = compressedDataUrl.match(/data:(image\/\w+)/);
         var cImageUrl = 'data:' + (cmime ? cmime[1] : 'image/jpeg') + ';base64,' + cb64;
+        console.log('[OCR] 压缩后大小:', Math.round(cImageUrl.length / 1024) + 'KB');
         callSiliconFlowOCR(apiKey, cImageUrl, progressFill, progressText, btn);
       });
       return;
@@ -502,54 +503,76 @@
   }
 
   function callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn) {
-    fetch('https://api.siliconflow.cn/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({
-        model: 'Qwen/Qwen2-VL-7B-Instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: '请识别这张图片中的所有文字内容，完整输出，保持原来的段落和换行。如果包含数学公式，请用 LaTeX 格式输出。只输出文字，不要添加任何解释。' },
-            { type: 'image_url', image_url: { url: imageUrl } }
-          ]
-        }],
-        max_tokens: 2048,
-        temperature: 0.1
-      })
-    }).then(function (r) {
-      progressFill.style.width = '70%';
-      progressText.textContent = '正在解析结果...';
-      if (!r.ok) {
-        return r.text().then(function (txt) {
-          throw new Error('HTTP ' + r.status + ' - ' + (txt || r.statusText));
-        });
-      }
-      return r.json();
-    }).then(function (data) {
-      var text = '';
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        text = data.choices[0].message.content || '';
-      }
-      text = text.trim();
-      if (!text) { showToast('未能识别到文字，请确保图片清晰', 'warning'); return; }
-      STATE.ocrResult = text;
-      $('ocrText').textContent = text;
-      $('ocrResult').hidden = false;
-      $('saveSection').hidden = false;
-      updateSubjectSelect();
-      progressFill.style.width = '100%';
-      progressText.textContent = '识别完成！';
-      showToast('AI 文字识别完成！', 'success');
-    }).catch(function (err) {
-      console.error('OCR识别失败:', err);
-      var msg = (err.message || '网络错误').substring(0, 200);
-      showToast('OCR识别失败：' + msg, 'error');
-      progressText.textContent = '识别失败：' + msg;
-    }).then(function () {
-      setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
-      btn.disabled = false;
-    });
+    // 多模型降级：依次尝试，失败则换下一个
+    var models = [
+      'Qwen/Qwen2-VL-7B-Instruct',
+      'Qwen/Qwen2.5-VL-7B-Instruct',
+      'Qwen/Qwen-VL-Chat',
+      'Pro/Qwen/Qwen2-VL-7B-Instruct'
+    ];
+    tryWithModel(models, 0);
+
+    function tryWithModel(modelList, idx) {
+      var model = modelList[idx];
+      progressText.textContent = '正在调用 ' + model + ' 识别...';
+      console.log('[OCR] 尝试模型:', model, '图片大小:', Math.round(imageUrl.length / 1024) + 'KB');
+
+      fetch('https://api.siliconflow.cn/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: '请识别这张图片中的所有文字内容，完整输出。如果包含数学公式，请用 LaTeX 格式输出（如 $x^2$）。只输出文字，不要解释。' },
+              { type: 'image_url', image_url: { url: imageUrl } }
+            ]
+          }],
+          max_tokens: 2048,
+          temperature: 0.1,
+          stream: false
+        })
+      }).then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (txt) {
+            throw new Error(model + ' HTTP ' + r.status + ' - ' + (txt || r.statusText));
+          });
+        }
+        return r.json();
+      }).then(function (data) {
+        var text = '';
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          text = data.choices[0].message.content || '';
+        }
+        if (!text) throw new Error('返回结果为空');
+        progressFill.style.width = '100%';
+        progressText.textContent = '识别完成！';
+        return text;
+      }).then(function (text) {
+        text = text.trim();
+        STATE.ocrResult = text;
+        $('ocrText').textContent = text;
+        $('ocrResult').hidden = false;
+        $('saveSection').hidden = false;
+        updateSubjectSelect();
+        showToast('AI 文字识别完成！', 'success');
+        setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
+        btn.disabled = false;
+      }).catch(function (err) {
+        console.warn('[OCR] 失败:', err.message);
+        if (idx + 1 < modelList.length) {
+          tryWithModel(modelList, idx + 1);
+        } else {
+          // 全部模型都失败
+          var msg = (err.message || '网络错误').substring(0, 250);
+          showToast('OCR识别失败：' + msg, 'error');
+          progressText.textContent = '识别失败';
+          setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
+          btn.disabled = false;
+        }
+      });
+    }
   }
 
   // ===== 保存错题 =====
