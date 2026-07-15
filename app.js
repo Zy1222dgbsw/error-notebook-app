@@ -475,7 +475,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
       body: JSON.stringify({
-        model: 'Pro/Qwen/Qwen2-VL-7B-Instruct',
+        model: 'Qwen/Qwen2-VL-7B-Instruct',
         messages: [{
           role: 'user',
           content: [
@@ -681,7 +681,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
-          model: 'Pro/Qwen/Qwen2-7B-Instruct',
+          model: 'Qwen/Qwen2-7B-Instruct',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: question }],
           temperature: 0.7,
           max_tokens: 2000
@@ -839,6 +839,13 @@
           }
         }
       }
+    });
+
+    // 清除已上传图片
+    $('btnClearImage').addEventListener('click', function (e) {
+      e.stopPropagation();
+      resetUpload();
+      showToast('已清除', 'success');
     });
 
     uploadArea.addEventListener('dragover', function (e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
