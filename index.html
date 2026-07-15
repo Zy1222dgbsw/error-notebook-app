@@ -4,41 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=4">
-  <link rel="manifest" href="manifest.json?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="manifest" href="manifest.json?v=5">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="错题本">
-  <!-- Tesseract.js: 优先使用国内CDN，失败后用备用CDN -->
-  <script>
-    (function() {
-      var CDNS = [
-        'https://registry.npmmirror.com/tesseract.js/5.1.1/files/dist/tesseract.min.js',
-        'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js',
-        'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
-      ];
-      var idx = 0;
-      function tryLoad() {
-        if (idx >= CDNS.length) return;
-        var s = document.createElement('script');
-        s.src = CDNS[idx];
-        s.async = false;
-        s.onload = function() { console.log('Tesseract.js loaded from CDN #' + (idx + 1)); };
-        s.onerror = function() { idx++; tryLoad(); };
-        document.head.appendChild(s);
-      }
-      // 12 秒后如果还没加载成功，标记为不可用
-      setTimeout(function() {
-        if (typeof Tesseract === 'undefined') {
-          console.warn('Tesseract.js CDN 全部加载失败，OCR 功能不可用');
-          window.TESSERACT_UNAVAILABLE = true;
-        }
-      }, 12000);
-      tryLoad();
-    })();
-  </script>
+  <!-- Markdown + 数学公式渲染 -->
+  <script src="https://registry.npmmirror.com/marked/14.1.1/files/marked.min.js"></script>
+  <link rel="stylesheet" href="https://registry.npmmirror.com/katex/0.16.10/files/dist/katex.min.css">
+  <script src="https://registry.npmmirror.com/katex/0.16.10/files/dist/katex.min.js"></script>
+  <script src="https://registry.npmmirror.com/katex/0.16.10/files/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -237,14 +214,16 @@
           <div class="form-group">
             <label>AI 服务提供商：</label>
             <select id="aiProvider" class="form-select">
+              <option value="siliconflow">硅基流动（推荐，国内快）</option>
               <option value="pollinations">Pollinations AI（免费，无需密钥）</option>
               <option value="deepseek">DeepSeek（需API密钥，中文效果好）</option>
               <option value="custom">自定义接口</option>
             </select>
           </div>
-          <div class="form-group" id="apiKeyGroup" hidden>
-            <label>API 密钥：</label>
-            <input type="password" id="apiKey" class="form-input" placeholder="输入你的 API Key">
+          <div class="form-group" id="apiKeyGroup">
+            <label>API 密钥（硅基流动 / DeepSeek）：</label>
+            <input type="password" id="apiKey" class="form-input" placeholder="输入 API Key">
+            <p class="hint">硅基流动注册：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a>，新用户送额度</p>
           </div>
           <div class="form-group" id="customEndpointGroup" hidden>
             <label>自定义接口地址：</label>
@@ -337,6 +316,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
