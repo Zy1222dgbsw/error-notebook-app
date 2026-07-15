@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=8">
-  <link rel="manifest" href="manifest.json?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="manifest" href="manifest.json?v=9">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
@@ -56,6 +56,10 @@
             </div>
             <input type="file" id="fileInput" accept="image/*" hidden>
             <div id="imagePreviewWrap" hidden>
+              <div class="image-preview-header">
+                <span>📷 已选图片</span>
+                <button class="btn btn-sm btn-secondary" id="btnClearImage" type="button">✕ 清除</button>
+              </div>
               <img id="imagePreview" alt="预览">
             </div>
           </div>
@@ -221,7 +225,7 @@
           <div class="form-group" id="apiKeyGroup">
             <label>API 密钥（硅基流动 / DeepSeek）：</label>
             <input type="password" id="apiKey" class="form-input" placeholder="输入 API Key">
-            <p class="hint">硅基流动注册：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a>，新用户送额度</p>
+            <p class="hint">硅基流动注册：<a href="https://cloud.siliconflow.cn" target="_blank">cloud.siliconflow.cn</a></p>
           </div>
           <div class="form-group" id="customEndpointGroup" hidden>
             <label>自定义接口地址：</label>
@@ -314,6 +318,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
