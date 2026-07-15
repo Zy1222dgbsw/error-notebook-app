@@ -505,9 +505,12 @@
   function callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn) {
     // 多模型降级：依次尝试，失败则换下一个
     var models = [
-      'Qwen/Qwen2-VL-7B-Instruct',
       'Qwen/Qwen2.5-VL-7B-Instruct',
+      'Qwen/Qwen2-VL-7B-Instruct',
       'Qwen/Qwen-VL-Chat',
+      'THUDM/glm-4v-9b',
+      '01-ai/Yi-VL-6B-Chat',
+      'OpenGVLab/InternVL2-8B',
       'Pro/Qwen/Qwen2-VL-7B-Instruct'
     ];
     tryWithModel(models, 0);
@@ -741,7 +744,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
-          model: 'Qwen/Qwen2-7B-Instruct',
+          model: 'Qwen/Qwen2.5-7B-Instruct',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: question }],
           temperature: 0.7,
           max_tokens: 2000
@@ -850,6 +853,59 @@
     localStorage.setItem('errorNotebook_customEndpoint', $('customEndpoint').value.trim());
     $('settingsOverlay').hidden = true;
     showToast('设置已保存', 'success');
+  }
+
+  // ===== 测试 API Key =====
+  function testApiKey() {
+    var apiKey = $('apiKey').value.trim();
+    if (!apiKey) { showToast('请先填写 API Key', 'warning'); return; }
+    var result = $('apiTestResult');
+    result.hidden = false;
+    result.textContent = '⏳ 正在测试模型可用性...\n';
+    var testModels = [
+      'Qwen/Qwen2.5-7B-Instruct',
+      'Qwen/Qwen2-7B-Instruct',
+      'Qwen/Qwen2.5-VL-7B-Instruct',
+      'Qwen/Qwen2-VL-7B-Instruct',
+      'Qwen/Qwen-VL-Chat',
+      'THUDM/glm-4v-9b',
+      '01-ai/Yi-VL-6B-Chat',
+      'OpenGVLab/InternVL2-8B',
+      'Pro/Qwen/Qwen2-VL-7B-Instruct'
+    ];
+    testModelOneByOne(testModels, 0, apiKey, result);
+  }
+
+  function testModelOneByOne(models, idx, apiKey, result) {
+    if (idx >= models.length) {
+      result.textContent += '\n\n✅ 测试完成！可用的模型标了 ✓';
+      return;
+    }
+    var model = models[idx];
+    result.textContent += '测试: ' + model + ' ... ';
+    fetch('https://api.siliconflow.cn/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: 'user', content: 'hi' }],
+        max_tokens: 5
+      })
+    }).then(function (r) {
+      if (r.ok) {
+        result.textContent += '✓ 可用\n';
+      } else {
+        return r.text().then(function (txt) {
+          var errMsg = '';
+          try { var d = JSON.parse(txt); errMsg = d.message || d.error || txt; } catch (e) { errMsg = txt; }
+          result.textContent += '✗ ' + r.status + ' - ' + (errMsg.substring(0, 80)) + '\n';
+        });
+      }
+    }).catch(function (err) {
+      result.textContent += '✗ ' + (err.message || '网络错误').substring(0, 80) + '\n';
+    }).then(function () {
+      testModelOneByOne(models, idx + 1, apiKey, result);
+    });
   }
 
   // ===== 初始化（DOMContentLoaded 内执行） =====
@@ -966,6 +1022,7 @@
     });
     $('aiProvider').addEventListener('change', function (e) { toggleProviderFields(e.target.value); });
     $('btnSaveSettings').addEventListener('click', saveSettings);
+    $('btnTestApi').addEventListener('click', testApiKey);
 
     // ===== AI 弹窗 =====
     $('btnCloseModal').addEventListener('click', function () { $('modalOverlay').hidden = true; });
