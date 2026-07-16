@@ -474,22 +474,17 @@
           messages: [{
             role: 'user',
             content: [
-              { type: 'text', text: '请仔细识别这张图片中的所有文字内容，完整准确地输出。要求：
-1. 如果包含数学公式，请用 LaTeX 格式输出，行内公式用 $...$ 包裹，独立公式用 $$...$$ 包裹
-2. 保持原文的层次结构和标点符号
-3. 如有表格、列表等结构，用 Markdown 格式输出
-4. 只输出识别到的文字内容，不要添加任何解释或说明' },
+              { type: 'text', text: '请仔细识别这张图片中的所有文字内容，完整准确地输出。要求：\n1. 如果包含数学公式，请用 LaTeX 格式输出，行内公式用 $...$ 包裹，独立公式用 $$...$$ 包裹\n2. 保持原文的层次结构和标点符号\n3. 如有表格、列表等结构，用 Markdown 格式输出\n4. 只输出识别到的文字内容，不要添加任何解释或说明' },
               { type: 'image_url', image_url: { url: imageUrl } }
             ]
           }],
           max_tokens: 2048,
-          temperature: 0.1,
-          stream: false
+          temperature: 0.7,
         })
       }).then(function (r) {
         if (!r.ok) {
           return r.text().then(function (txt) {
-            throw new Error(model + ' HTTP ' + r.status + ' - ' + (txt || r.statusText));
+            throw new Error(model + ' HTTP ' + r.status + ' - ' + (txt ? txt.substring(0, 200) : r.statusText));
           });
         }
         return r.json();
@@ -579,25 +574,6 @@
     }).join('');
     // 渲染 Markdown 和 LaTeX 公式
     renderErrorListContent();
-  }
-  // 渲染错题列表中的公式和 Markdown
-  function renderErrorListContent() {
-    var containers = document.querySelectorAll('.error-text.rendered-content, .ai-answer-content');
-    containers.forEach(function (el) {
-      if (typeof renderMathInElement !== 'undefined') {
-        try {
-          renderMathInElement(el, {
-            delimiters: [
-              { left: '$$', right: '$$', display: true },
-              { left: '$', right: '$', display: false },
-              { left: '\\(', right: '\\)', display: false },
-              { left: '\\[', right: '\\]', display: true }
-            ],
-            throwOnError: false
-          });
-        } catch (e) {}
-      }
-    });
   }
   // 渲染错题列表中的公式和 Markdown
   function renderErrorListContent() {
