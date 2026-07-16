@@ -1,11 +1,24 @@
 # 📓 智能错题本 — Smart Error Notebook
 
 > 📸 拍照 → 🤖 AI大模型识别 → 📐 Markdown/公式渲染 → 🧠 AI解答 → 📚 学科分类  
-> 用 Web 技术解决真实学习痛点 · 编程课程项目
+> 用 Web 技术解决真实学习痛点 · SUM26001 编程课程期末项目
 
 [![GitHub Pages](https://img.shields.io/badge/🌐-在线体验-blue)](https://Zy1222dgbsw.github.io/error-notebook-app/)
 [![PWA](https://img.shields.io/badge/📱-PWA可安装-purple)](#pwa-手机安装)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+---
+
+## 📋 项目成员
+
+| 姓名 | 学号 | 贡献 |
+|------|------|------|
+| 卓妍 | 202320102053 | 独立完成全部工作：项目设计、前端开发（HTML/CSS/JS）、AI API 集成、公式渲染、PWA 配置、测试调试、文档撰写 |
+
+## 📄 最终报告
+
+- **报告源文件（Quarto）**：[report.qmd](./report.qmd)
+- **报告 PDF**：[report.pdf](./report.pdf)
 
 ---
 
