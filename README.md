@@ -1,6 +1,6 @@
 # 📓 智能错题本 — Smart Error Notebook
 
-> 📸 拍照 → 🔍 OCR 识别 → 🤖 AI 解答 → 📚 学科分类  
+> 📸 拍照 → 🤖 AI大模型识别 → 📐 Markdown/公式渲染 → 🧠 AI解答 → 📚 学科分类  
 > 用 Web 技术解决真实学习痛点 · 编程课程项目
 
 [![GitHub Pages](https://img.shields.io/badge/🌐-在线体验-blue)](https://Zy1222dgbsw.github.io/error-notebook-app/)
@@ -11,7 +11,7 @@
 
 ## 🎯 一句话说清楚
 
-**用手机拍一张错题照片 → App 自动识别文字 → AI 给出详细解答 → 按学科自动归档。** 整个过程不到 30 秒，替代了传统的手抄错题本。
+**用手机拍一张错题照片 → AI 大模型识别文字（支持公式）→ 实时预览 Markdown 渲染 → AI 给出详细解答 → 按学科自动归档。** 整个过程不到 30 秒，替代了传统的手抄错题本。
 
 ---
 
@@ -19,14 +19,15 @@
 
 | 功能 | 说明 |
 |------|------|
-| 📸 拍照 / 🖼️ 相册 | 独立双按钮：直接拍照 或 从本地相册选取 |
-| 🔍 OCR 识别 | Tesseract.js 浏览器端识别，支持中英文混合 |
-| ✏️ 编辑确认 | 识别后可修改文字，一键清空或确认 |
-| 🤖 AI 解答 | 自动给出 **正确答案 + 解题思路 + 知识点 + 易错提醒** |
+| 📸 拍照 / 🖼️ 相册 | 上传图片，支持裁剪选取题目区域 |
+| 🤖 AI 大模型识别 | 接入硅基流动 API，使用 Qwen3-VL 系列视觉大模型识别文字，支持中英文 + 数学公式 |
+| 📐 Markdown + 公式渲染 | 识别结果支持 Markdown 格式和 LaTeX 数学公式实时渲染预览 |
+| ✏️ 编辑确认 | 识别后可修改文字，支持编辑/预览模式切换，一键清空或确认 |
+| 🧠 AI 解答 | 使用 DeepSeek-V3 大模型，给出 **正确答案 + 解题思路 + 知识点 + 易错提醒**，支持公式渲染 |
 | 🏷️ 题型分类 | 选择题/填空/解答/证明……每种学科有专属题型 |
 | 📚 学科管理 | 新建/编辑/删除学科，自定义名称+颜色+题型 |
 | 🔎 搜索筛选 | 按学科筛选、关键词搜索 |
-| 🖨️ 打印错题 | 勾选错题 → 一键生成 A4 打印稿，含 AI 解答和答题区 |
+| 🖨️ 打印错题 | 勾选错题 → 一键生成 A4 打印稿，含 AI 解答和答题区，支持公式渲染 |
 | 🌙 深色模式 | 自动跟随系统，也可手动切换 |
 | 📱 手机安装 | PWA 支持，可添加到手机桌面像原生 App（顶栏内置安装指南） |
 | 💾 本地存储 | 数据在浏览器本地，无需服务器，隐私安全 |
@@ -39,11 +40,13 @@
 |------|------|-----------|
 | 结构 | HTML5 + CSS3 | 原生 Web，零依赖 |
 | 逻辑 | JavaScript (ES6+) | 无框架，代码清晰 |
-| OCR | Tesseract.js v5 | 浏览器端运行，无需后端 |
-| AI | Pollinations AI / DeepSeek API | 免费优先，可选付费增强 |
+| AI 识别 | 硅基流动 API + Qwen3-VL-32B | 视觉大模型，识别准确率高，支持公式输出 |
+| AI 解答 | 硅基流动 API + DeepSeek-V3 | 强推理能力，中文理解优秀 |
+| 公式渲染 | KaTeX | 最快的数学公式渲染库 |
+| Markdown | marked.js | 轻量级 Markdown 解析器 |
 | 存储 | localStorage | 简单可靠，数据在用户设备 |
 | 离线 | Service Worker | PWA 离线缓存 |
-| 版本 | Git + GitHub | 12 次提交，完整开发故事 |
+| 版本 | Git + GitHub | 完整开发故事 |
 
 ---
 
@@ -54,6 +57,13 @@
 👉 **[https://Zy1222dgbsw.github.io/error-notebook-app/](https://Zy1222dgbsw.github.io/error-notebook-app/)**
 
 直接用浏览器打开就行，手机电脑都能用。
+
+### 配置 AI 服务
+
+1. 打开 App，点击右上角 ⚙️ 设置
+2. 注册硅基流动账号：[cloud.siliconflow.cn](https://cloud.siliconflow.cn)
+3. 获取 API Key，填入设置面板
+4. 保存设置后即可使用 AI 识别和解答功能
 
 ### 本地运行
 
@@ -76,9 +86,9 @@ cd error-notebook-app
 
 ```
 error-notebook-app/
-├── index.html          # 主页面
-├── style.css           # 样式（含深色模式）
-├── app.js              # 全部业务逻辑
+├── index.html          # 主页面（含 Markdown/KaTeX CDN 引入）
+├── style.css           # 样式（含深色模式 + 渲染内容样式）
+├── app.js              # 全部业务逻辑（AI识别 + 渲染 + AI解答）
 ├── manifest.json       # PWA 配置
 ├── sw.js               # Service Worker（离线缓存）
 ├── 项目报告.md          # 课程报告
@@ -87,34 +97,34 @@ error-notebook-app/
 
 ---
 
-## 📖 开发历程（25 次提交）
+## 🤖 AI 模型说明
 
-```
-b602119 🐛 fix: 修复 app.js 语法错误 — 删除孤儿代码
-3482089 🐛 fix: 彻底解决缓存问题 — 版本号 + 防缓存指令
-1dda2c1 🐛 fix: SW 简化为强网络优先
-c8a1d95 🐛 fix: SW 缓存策略改为 network-first
-8368101 ✨ feat: 学科编辑功能 + 移动端安装指南
-a5db2d7 🐛✨ fix+feat: 修复 SW 缓存 + 错题打印功能
-c918283 🐛 fix: 错题本/学科管理标签页空白问题
-c4bfbcb 🐛 fix: 双按钮模式切换
-dd8db94 📝 docs: 更新 README
-56df331 ✨ feat: 自定义题型 + 双通道上传
-9c8c507 ✨ feat: 题型分类 + OCR结果编辑确认
-07ae15e 📝 docs: 重写 README
-4f4428c 📱 feat: PWA 支持 — 可安装到手机桌面
-4cf0f6b 🌙 feat: 深色模式支持
-b013ac8 🐛 fix: [hidden] 属性被 CSS 覆盖
-2f686a3 🐛 fix: 全面重写 - 修复所有交互问题
-06db1ae 🐛 fix: 修复正则表达式语法错误
-4b7e537 🐛 fix: 修复 CDN 加载失败
-8356589 📄 docs: 完成课程项目报告
-d5fe989 📱 style: 移动端体验优化
-85eb9dd 🔧 chore: 添加 .gitignore
-d72acbf 🔍 perf: OCR识别引擎优化
-192d708 📝 添加项目 README
-90fe23e 🔧 初始化项目结构
-```
+### 识别模型（OCR 替代）
+
+使用硅基流动 API 调用视觉大模型进行文字识别，支持多模型降级：
+
+| 优先级 | 模型 | 说明 |
+|--------|------|------|
+| 主模型 | Qwen/Qwen3-VL-32B-Instruct | 320亿参数视觉大模型，识别精度最高 |
+| 备选 1 | Qwen/Qwen3-VL-30B-A3B-Instruct | MoE 架构，平衡速度与精度 |
+| 备选 2 | Qwen/Qwen3-VL-8B-Instruct | 轻量级，响应速度快 |
+| 备选 3 | zai-org/GLM-4.5V | 智谱视觉模型，多模态能力强 |
+
+### 解答模型
+
+| 模型 | 说明 |
+|------|------|
+| deepseek-ai/DeepSeek-V3 | DeepSeek 最新大模型，推理能力强，中文理解优秀 |
+
+### 公式与 Markdown 渲染
+
+- **KaTeX**：支持行内公式 `$x^2$` 和独立公式 `$$\int_0^1 f(x)dx$$`
+- **marked.js**：支持完整 Markdown 语法（标题、列表、表格、代码块等）
+- 识别结果、错题列表、AI 解答、打印输出均支持渲染
+
+---
+
+## 📖 开发历程
 
 ### 踩过的坑
 
@@ -123,10 +133,10 @@ d72acbf 🔍 perf: OCR识别引擎优化
 | jsdelivr CDN 国内被墙，页面白屏 | 换 npmmirror 国内镜像 + 多 CDN 降级 | CDN 选型要考虑地域 |
 | `[hidden]` 被 `.modal-overlay { display:flex }` 覆盖 | 加 `[hidden] { display:none !important }` | CSS 权重优先级 |
 | 正则 `\n` 被 Python 转成物理换行 | 修复转义，检查编码 | 批量替换要验证 |
-| Tesseract 首次加载 30MB 太慢 | 复用 Worker 实例，第二次秒开 | Web Worker 生命周期 |
+| 旧版视觉模型被硅基流动下架 | 升级为 Qwen3-VL 系列最新模型 | API 模型版本管理 |
 | 手机拍照图片 >5MB | Canvas 压缩为 JPEG | 客户端图片处理 |
 | Service Worker 缓存旧页面，功能不更新 | 升级缓存版本 + activate 清旧缓存 | PWA 缓存策略管理 |
-| 标签页切换后内容空白 | CSS `!important` 覆盖了 tab-panel 显示 | CSS 权重与 HTML 属性冲突 |
+| LaTeX 公式在列表中不渲染 | 统一使用 renderMathInElement 遍历渲染 | KaTeX 渲染时机管理 |
 
 
 ## 📄 许可证

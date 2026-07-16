@@ -1258,3 +1258,185 @@ body {
   word-break: break-all;
   font-family: monospace;
 }
+
+/* ===== OCR 预览区域 ===== */
+.ocr-preview-wrap {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ocr-preview-header {
+  padding: 8px 12px;
+  background: var(--upload-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.ocr-preview-header h4 {
+  font-size: 14px;
+  margin: 0;
+  color: var(--primary);
+}
+
+.ocr-preview-content {
+  padding: 16px;
+  font-size: 15px;
+  line-height: 1.8;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ===== 渲染内容通用样式（Markdown + KaTeX） ===== */
+.rendered-content h1,
+.rendered-content h2,
+.rendered-content h3,
+.error-text.rendered-content h3,
+.ai-answer-content h3 {
+  font-size: 16px;
+  margin: 12px 0 6px;
+  color: var(--primary);
+}
+
+.rendered-content h1 { font-size: 18px; }
+.rendered-content h2 { font-size: 17px; }
+
+.rendered-content p,
+.ocr-preview-content p {
+  margin: 6px 0;
+  line-height: 1.8;
+}
+
+.rendered-content ul,
+.rendered-content ol,
+.ocr-preview-content ul,
+.ocr-preview-content ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+
+.rendered-content li,
+.ocr-preview-content li {
+  margin-bottom: 4px;
+}
+
+.rendered-content code,
+.ocr-preview-content code {
+  background: var(--upload-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+}
+
+.rendered-content pre,
+.ocr-preview-content pre {
+  background: var(--upload-bg);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+.rendered-content table,
+.ocr-preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.rendered-content th,
+.rendered-content td,
+.ocr-preview-content th,
+.ocr-preview-content td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.rendered-content th,
+.ocr-preview-content th {
+  background: var(--upload-bg);
+  font-weight: 600;
+}
+
+.rendered-content blockquote,
+.ocr-preview-content blockquote {
+  border-left: 3px solid var(--primary-light);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--text-secondary);
+}
+
+.rendered-content .katex-display,
+.ocr-preview-content .katex-display {
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+/* 错题列表中的渲染内容 */
+.error-text.rendered-content {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.error-text.rendered-content p {
+  margin: 4px 0;
+}
+
+/* AI 解答内容渲染 */
+.ai-answer-content {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.ai-answer-content h2 {
+  font-size: 16px;
+  color: var(--primary);
+  margin: 12px 0 6px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.ai-answer-content h3 {
+  font-size: 15px;
+  color: var(--primary);
+  margin: 10px 0 4px;
+}
+
+.ai-answer-content p {
+  margin: 6px 0;
+}
+
+.ai-answer-content ul,
+.ai-answer-content ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+
+.ai-answer-content code {
+  background: var(--upload-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.ai-answer-content pre {
+  background: var(--upload-bg);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.ai-answer-content .katex-display {
+  margin: 10px 0;
+  overflow-x: auto;
+}
+
+/* 打印中的公式渲染 */
+@media print {
+  .question-text .katex,
+  .ai-answer .katex {
+    font-size: 1em;
+  }
+}
