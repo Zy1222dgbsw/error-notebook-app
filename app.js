@@ -605,7 +605,11 @@
     updateFilterSelect();
     showToast('错题已删除', 'success');
   }
-  // ===== 打印功能 =====
+  // ===== 打印功能（移动端优化版）=====
+  // 当前构建版本号，用于检测客户端是否需要刷新
+  const APP_VERSION = '15';
+  const APP_VERSION_KEY = 'errorNotebook_appVersion';
+
   function printSelectedErrors() {
     const checkboxes = $$('.error-checkbox:checked');
     if (checkboxes.length === 0) {
@@ -620,7 +624,14 @@
     }
     showToast('正在生成打印预览...', 'info');
 
-    const styleHTML = document.querySelector('link[rel="stylesheet"]').outerHTML;
+    // 检测本地存储的版本号，提示用户刷新
+    var storedVersion = localStorage.getItem(APP_VERSION_KEY);
+    if (storedVersion && storedVersion !== APP_VERSION) {
+      console.warn('[版本] 检测到旧版本: ' + storedVersion + ' → ' + APP_VERSION);
+    }
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+
+    const styleHTML = '<link rel="stylesheet" href="style.css?v=' + APP_VERSION + '">';
     const printCSS = `
       <style>
         @page { margin: 1.5cm; size: A4; }
@@ -638,6 +649,9 @@
         .ai-answer { background: #F3F4F6; border-left: 3px solid #4F46E5; padding: 12px; margin-top: 12px; border-radius: 4px; font-size: 14px; line-height: 1.7; }
         .ai-answer h3 { color: #4F46E5; font-size: 14px; margin: 8px 0 4px; }
         .answer-line { border-top: 1px dashed #E5E7EB; height: 30px; margin-top: 12px; }
+        .print-btn { display: block; margin: 20px auto; padding: 12px 24px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        .print-btn:hover { background: #4338CA; }
+        @media print { .print-btn { display: none; } }
       </style>`;
     const now = new Date().toLocaleString('zh-CN');
     let itemsHTML = selected.map(function (error, idx) {
@@ -645,8 +659,6 @@
       const subjectName = subject ? subject.name : '未分类';
       const typeTag = error.questionType ? '<span class="type-tag">' + escapeHTML(error.questionType) + '</span>' : '';
       const imageHTML = error.imageData ? '<img src="' + error.imageData + '" class="question-image">' : '';
-      // 不调用 formatAIAnswer（它会 setTimeout 找 $('answerContent')，在打印页会报错）
-      // 直接做 Markdown → HTML 转换
       let answerHTML = '';
       if (error.aiAnswer) {
         let ans = String(error.aiAnswer);
@@ -662,37 +674,84 @@
       return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + renderTextToHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
     }).join('');
 
-    // 关键修复：使用 iframe 代替 window.open，避免被浏览器拦截
+    // 打印按钮：移动端友好
+    const printButtonHTML = '<button class="print-btn" onclick="window.print()">🖨️ 点击打印 / 保存为 PDF</button>';
+
+    const fullHTML = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + printButtonHTML + '</body></html>';
+
+    // 移除已有的打印 iframe
     var existingFrame = document.getElementById('printFrame');
     if (existingFrame) existingFrame.remove();
 
-    var iframe = document.createElement('iframe');
-    iframe.id = 'printFrame';
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    // 方法 1：使用 Blob URL + 隐藏 iframe（最兼容的方案）
+    try {
+      var blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+      var blobUrl = URL.createObjectURL(blob);
 
-    var iframeDoc = iframe.contentWindow || iframe.contentDocument;
-    if (iframeDoc.document) iframeDoc = iframeDoc.document;
-    iframeDoc.open();
-    iframeDoc.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + '</body></html>');
-    iframeDoc.close();
+      var iframe = document.createElement('iframe');
+      iframe.id = 'printFrame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
 
-    setTimeout(function() {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        showToast('已生成打印预览（共 ' + selected.length + ' 道题）', 'success');
-      } catch (e) {
-        console.error('Print error:', e);
-        showToast('打印失败：' + e.message, 'error');
-      }
-      setTimeout(function() { iframe.remove(); }, 1000);
-    }, 500);
+      iframe.onload = function() {
+        setTimeout(function() {
+          try {
+            // 移动端：让 iframe 内容显示在主页面，方便用户点击打印按钮
+            // 这里我们使用一种混合方案：在当前页面打开打印预览
+            openPrintInCurrentPage(fullHTML, selected.length);
+            // 清理 iframe
+            setTimeout(function() {
+              iframe.remove();
+              URL.revokeObjectURL(blobUrl);
+            }, 500);
+          } catch (e) {
+            console.error('Print error:', e);
+            showToast('打印失败：' + e.message, 'error');
+            iframe.remove();
+            URL.revokeObjectURL(blobUrl);
+          }
+        }, 100);
+      };
+    } catch (e) {
+      console.error('Print iframe error:', e);
+      // 降级：直接用当前页面显示打印内容
+      openPrintInCurrentPage(fullHTML, selected.length);
+    }
+  }
+
+  // 在当前页面打开打印预览（移动端友好）
+  function openPrintInCurrentPage(htmlContent, count) {
+    // 保存当前页面内容
+    var savedBody = document.body.innerHTML;
+    var savedTitle = document.title;
+
+    // 替换为打印内容
+    document.title = '错题打印 - ' + count + '道题';
+    document.body.innerHTML = htmlContent;
+
+    // 添加返回按钮
+    var backBtn = document.createElement('button');
+    backBtn.textContent = '← 返回错题本';
+    backBtn.style.cssText = 'position:fixed;top:10px;right:10px;padding:10px 16px;background:#4F46E5;color:white;border:none;border-radius:6px;font-size:14px;cursor:pointer;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    backBtn.onclick = function() {
+      // 恢复原页面
+      document.body.innerHTML = savedBody;
+      document.title = savedTitle;
+      // 重新初始化（因为 DOM 被替换了）
+      setTimeout(function() {
+        init();
+      }, 50);
+    };
+    document.body.appendChild(backBtn);
+
+    showToast('已打开打印预览（' + count + ' 道题）', 'success');
   }
   function toggleSelectAll() {
     const checkboxes = $$('.error-checkbox');
@@ -1158,7 +1217,18 @@ $('btnStartOCR').addEventListener('click', startOCR);
     $('aiProvider').value = provider;
     $('aiProvider').value = provider;
     toggleProviderFields(provider);
-    console.log('[ErrorNotebook] 初始化完成，按钮事件已绑定');
+    console.log('[ErrorNotebook] 初始化完成，按钮事件已绑定 v' + APP_VERSION);
+
+    // 版本检测：如果本地存储的版本号与当前不一致，提示用户刷新
+    var storedVersion = localStorage.getItem(APP_VERSION_KEY);
+    if (storedVersion && storedVersion !== APP_VERSION) {
+      console.info('[版本] 检测到代码更新: ' + storedVersion + ' → ' + APP_VERSION);
+      // 显示一次性提示，1.5秒后自动消失
+      setTimeout(function() {
+        showToast('检测到新版本 v' + APP_VERSION + '，已自动更新', 'success');
+      }, 1500);
+    }
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
   }
   // ===== 启动 =====
   if (document.readyState === 'loading') {
