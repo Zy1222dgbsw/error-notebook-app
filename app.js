@@ -606,8 +606,8 @@
     showToast('错题已删除', 'success');
   }
   // ===== 打印功能（overlay 方案）=====
-  const APP_VERSION = "17";
-  const APP_VERSION_KEY = "errorNotebook_appVersion";
+  var APP_VERSION = "17";
+  var APP_VERSION_KEY = "errorNotebook_appVersion";
 
   function printSelectedErrors() {
     var checkboxes = $$(".error-checkbox:checked");
