@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>智能错题本 - Smart Error Notebook</title>
-  <link rel="stylesheet" href="style.css?v=12">
-  <link rel="manifest" href="manifest.json?v=12">
+  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="manifest" href="manifest.json?v=14">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <meta name="theme-color" content="#4F46E5">
@@ -100,7 +100,14 @@
               <div class="result-text" id="ocrText" contenteditable="true" placeholder="点击此处编辑识别出的文字..."></div>
               <div class="ocr-edit-toolbar">
                 <button class="btn btn-sm btn-secondary" id="btnClearText">🗑 清空重输</button>
+                <button class="btn btn-sm btn-secondary" id="btnTogglePreview">👁 预览渲染</button>
                 <button class="btn btn-sm btn-primary" id="btnConfirmText">✅ 确认内容</button>
+              </div>
+              <div id="ocrPreviewWrap" class="ocr-preview-wrap" hidden>
+                <div class="ocr-preview-header">
+                  <h4>📄 渲染预览（Markdown + 公式）</h4>
+                </div>
+                <div id="ocrPreview" class="ocr-preview-content rendered-content"></div>
               </div>
             </div>
           </div>
@@ -304,7 +311,7 @@
           <div class="install-section install-tip">
             <h4 class="install-title">💡 提示</h4>
             <ul class="install-steps">
-              <li>首次使用需联网下载 OCR 识别引擎（~30MB）</li>
+              <li>首次使用需联网进行 AI 识别（调用云端大模型）</li>
               <li>之后可离线使用（AI 功能需联网）</li>
               <li>所有数据存储在手机本地，隐私安全</li>
               <li>卸载 App 等于删除浏览器缓存，不会影响数据</li>
@@ -321,6 +328,6 @@
     <div class="toast-container" id="toastContainer"></div>
   </div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
