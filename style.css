@@ -1031,6 +1031,10 @@ body {
   background: var(--warning);
 }
 
+.toast.info {
+  background: var(--primary);
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);

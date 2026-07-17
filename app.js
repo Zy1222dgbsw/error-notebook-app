@@ -33,11 +33,14 @@
     const toast = document.createElement('div');
     toast.className = 'toast ' + type;
     toast.textContent = message;
+    // 'info' 类型延长显示时间
+    var hideAfter = type === 'info' ? 4000 : 2500;
+    var removeAfter = type === 'info' ? 4500 : 3000;
     container.appendChild(toast);
-    setTimeout(function () { toast.style.opacity = '0'; }, 2500);
+    setTimeout(function () { toast.style.opacity = '0'; }, hideAfter);
     setTimeout(function () {
       if (toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 3000);
+    }, removeAfter);
   }
   function escapeHTML(str) {
     const div = document.createElement('div');
@@ -611,12 +614,12 @@
     }
     const selectedIds = checkboxes.map(function (cb) { return cb.dataset.id; });
     const selected = STATE.errors.filter(function (e) { return selectedIds.indexOf(e.id) >= 0; });
-    // 构建打印 HTML
-    const printWin = window.open('', '_blank', 'width=800,height=900');
-    if (!printWin) {
-      showToast('浏览器拦截了弹窗，请允许弹窗', 'error');
+    if (selected.length === 0) {
+      showToast('未找到选中的错题', 'warning');
       return;
     }
+    showToast('正在生成打印预览...', 'info');
+
     const styleHTML = document.querySelector('link[rel="stylesheet"]').outerHTML;
     const printCSS = `
       <style>
@@ -642,12 +645,54 @@
       const subjectName = subject ? subject.name : '未分类';
       const typeTag = error.questionType ? '<span class="type-tag">' + escapeHTML(error.questionType) + '</span>' : '';
       const imageHTML = error.imageData ? '<img src="' + error.imageData + '" class="question-image">' : '';
-      const answerHTML = error.aiAnswer ? '<div class="ai-answer"><strong>AI 解答：</strong>' + formatAIAnswer(error.aiAnswer) + '</div>' : '<div class="answer-line"></div><div class="answer-line"></div><div class="answer-line"></div>';
+      // 不调用 formatAIAnswer（它会 setTimeout 找 $('answerContent')，在打印页会报错）
+      // 直接做 Markdown → HTML 转换
+      let answerHTML = '';
+      if (error.aiAnswer) {
+        let ans = String(error.aiAnswer);
+        if (typeof marked !== 'undefined' && marked.parse) {
+          try { ans = marked.parse(ans); } catch (e) { ans = ans.replace(/\n/g, '<br>'); }
+        } else {
+          ans = ans.replace(/## (.+)/g, '<h3>$1</h3>').replace(/\n/g, '<br>');
+        }
+        answerHTML = '<div class="ai-answer"><strong>AI 解答：</strong>' + ans + '</div>';
+      } else {
+        answerHTML = '<div class="answer-line"></div><div class="answer-line"></div><div class="answer-line"></div>';
+      }
       return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + renderTextToHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
     }).join('');
-    printWin.document.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + '<script>window.onload = function() { setTimeout(function() { window.print(); }, 200); };<\/script></body></html>');
-    printWin.document.close();
-    showToast('已生成打印预览', 'success');
+
+    // 关键修复：使用 iframe 代替 window.open，避免被浏览器拦截
+    var existingFrame = document.getElementById('printFrame');
+    if (existingFrame) existingFrame.remove();
+
+    var iframe = document.createElement('iframe');
+    iframe.id = 'printFrame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    var iframeDoc = iframe.contentWindow || iframe.contentDocument;
+    if (iframeDoc.document) iframeDoc = iframeDoc.document;
+    iframeDoc.open();
+    iframeDoc.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + '</body></html>');
+    iframeDoc.close();
+
+    setTimeout(function() {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        showToast('已生成打印预览（共 ' + selected.length + ' 道题）', 'success');
+      } catch (e) {
+        console.error('Print error:', e);
+        showToast('打印失败：' + e.message, 'error');
+      }
+      setTimeout(function() { iframe.remove(); }, 1000);
+    }, 500);
   }
   function toggleSelectAll() {
     const checkboxes = $$('.error-checkbox');
@@ -839,8 +884,12 @@
     var apiKey = $('apiKey').value.trim();
     if (!apiKey) { showToast('请先填写 API Key', 'warning'); return; }
     var result = $('apiTestResult');
-    result.hidden = false;
-    result.textContent = '⏳ 正在测试模型可用性...\n';
+    // 使用 style.display 以覆盖 HTML 中内联的 display:none
+    result.style.display = 'block';
+    result.textContent = '⏳ 正在测试模型可用性，请稍候...\n';
+    showToast('开始测试模型可用性...', 'info');
+    // 滚动到结果区
+    setTimeout(function() { result.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
     var testModels = [
       'Qwen/Qwen3-VL-32B-Instruct',
       'Qwen/Qwen3-VL-30B-A3B-Instruct',
