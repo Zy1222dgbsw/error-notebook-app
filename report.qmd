@@ -275,6 +275,38 @@ lang: zh-CN
 5. 打印页面的 AI 解答使用内联的 `marked.parse` 直接转换，不调用可能出错的 `formatAIAnswer`
 6. 添加加载状态 toast（`info` 类型）和错误处理
 
+## 瓶颈 10：移动端打印失效 + 浏览器缓存导致旧代码运行
+
+**我们面临的核心挑战**：在手机上点击「打印选中」按钮仍无反应；同时 OCR 识别错误提示的模型名 `Pro/Qwen/Qwen2-VL-7B-Instruct` 是旧模型，但实际 main 分支已经更新为新模型 `Qwen/Qwen3-VL-32B-Instruct`。
+
+**我们在哪里卡住了**：经过排查发现两个独立的、互相叠加的问题：
+
+1. **iOS Safari 等移动浏览器不支持 0×0 隐藏 iframe 的 `contentWindow.print()`**。iOS 要求 iframe 至少有一定的可见区域，且对程序调用的 `print()` 有额外限制
+2. **GitHub Pages + 浏览器 HTTP 缓存**使得用户在第一次访问后，即使服务端代码已经更新，浏览器仍会优先使用本地缓存的 `app.js`，导致「代码已更新但用户看不到」的情况
+
+**为应对瓶颈所做的调整**：
+
+1. **打印方案改为三段式降级**：首选 Blob URL + iframe，失败时降级到「在当前页面显示打印内容」方案——保存当前 body，替换为打印 HTML，配「🖨️ 点击打印 / 保存为 PDF」按钮和「← 返回错题本」按钮
+2. **引入版本检测机制**：在 `app.js` 顶部定义 `const APP_VERSION = '15'`，每次启动检查 localStorage 中的版本号 `errorNotebook_appVersion`，不一致时自动 toast 提示「检测到新版本」
+3. **升级资源 URL 版本参数**：`style.css?v=14 → ?v=15`，强制浏览器绕过 HTTP 缓存重新下载
+
+**我们找到的解决方案**：
+
+1. **打印功能**（移动端 + 桌面端通用）：
+   - 优先使用 Blob URL（`new Blob([html])` + `URL.createObjectURL`）+ 隐藏 iframe 触发打印
+   - iframe 加载完成后调用 `openPrintInCurrentPage()`，在当前页面显示打印内容
+   - 打印页面顶部添加「← 返回错题本」浮动按钮，点击后恢复原页面并重新初始化
+2. **缓存破除双重保险**：
+   - URL 参数 `?v=15` 让浏览器认为是新资源
+   - localStorage 版本号检测让用户主动确认已更新
+3. **错误处理**：捕获所有可能的异常并显示友好的 toast 提示
+
+**关键教训**：
+
+- **PWA / Web 应用的版本管理至关重要**——必须设计版本检测机制，否则用户永远在用旧代码
+- **移动端与桌面端的行为差异**——iOS Safari 对 iframe、window.open、print() 都有更严格的限制
+- **HTTP 缓存是无声的杀手**——`v=N` 参数是简单但有效的缓存破坏手段
+
 # Git 版本控制
 
 本项目通过 Git 进行版本控制，提交历史完整记录了开发过程。以下是关键提交节点：
