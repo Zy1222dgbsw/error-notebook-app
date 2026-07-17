@@ -1035,6 +1035,42 @@ body {
   background: var(--primary);
 }
 
+/* ===== 打印预览 Overlay ===== */
+.print-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 100000; background: white;
+  overflow-y: auto;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.print-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100001;
+  background: white; padding: 10px 16px;
+  border-bottom: 2px solid #4F46E5;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.print-topbar span { font-size: 16px; font-weight: 700; color: #4F46E5; }
+.print-topbar div { display: flex; gap: 8px; }
+.btn-print-close {
+  padding: 8px 16px; background: #6B7280; color: white;
+  border: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+}
+.btn-print-go {
+  padding: 8px 20px; background: #4F46E5; color: white;
+  border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.print-content { padding: 70px 20px 40px; }
+.print-title {
+  text-align: center; color: #4F46E5;
+  border-bottom: 2px solid #4F46E5; padding-bottom: 10px; margin-bottom: 20px;
+}
+.print-meta {
+  text-align: center; color: #6B7280; margin-bottom: 30px; font-size: 14px;
+}
+@media print {
+  .print-overlay { position: static; }
+  .print-topbar { display: none; }
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);

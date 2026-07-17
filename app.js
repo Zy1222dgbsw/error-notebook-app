@@ -605,138 +605,65 @@
     updateFilterSelect();
     showToast('错题已删除', 'success');
   }
-  // ===== 打印功能（移动端优化版）=====
-  // 当前构建版本号，用于检测客户端是否需要刷新
-  const APP_VERSION = '16';
-  const APP_VERSION_KEY = 'errorNotebook_appVersion';
+  // ===== 打印功能（overlay 方案）=====
+  const APP_VERSION = "17";
+  const APP_VERSION_KEY = "errorNotebook_appVersion";
 
   function printSelectedErrors() {
-    const checkboxes = $$('.error-checkbox:checked');
-    if (checkboxes.length === 0) {
-      showToast('请先勾选要打印的错题', 'warning');
-      return;
-    }
-    const selectedIds = checkboxes.map(function (cb) { return cb.dataset.id; });
-    const selected = STATE.errors.filter(function (e) { return selectedIds.indexOf(e.id) >= 0; });
-    if (selected.length === 0) {
-      showToast('未找到选中的错题', 'warning');
-      return;
-    }
-    showToast('正在生成打印预览...', 'info');
+    var checkboxes = $$(".error-checkbox:checked");
+    if (checkboxes.length === 0) { showToast("请先勾选要打印的错题", "warning"); return; }
+    var selectedIds = Array.prototype.map.call(checkboxes, function(cb) { return cb.dataset.id; });
+    var selected = STATE.errors.filter(function(e) { return selectedIds.indexOf(e.id) >= 0; });
+    if (selected.length === 0) { showToast("未找到选中的错题", "warning"); return; }
 
-    // 检测本地存储的版本号，提示用户刷新
-    var storedVersion = localStorage.getItem(APP_VERSION_KEY);
-    if (storedVersion && storedVersion !== APP_VERSION) {
-      console.warn('[版本] 检测到旧版本: ' + storedVersion + ' → ' + APP_VERSION);
-    }
-    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    // 构建 overlay HTML
+    var oldO = document.getElementById("printOverlayWrap");
+    if (oldO) oldO.remove();
 
-    const styleHTML = '<link rel="stylesheet" href="style.css?v=' + APP_VERSION + '">';
-    const printCSS = `
-      <style>
-        @page { margin: 1.5cm; size: A4; }
-        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 20px; color: #1F2937; }
-        h1 { text-align: center; color: #4F46E5; border-bottom: 2px solid #4F46E5; padding-bottom: 10px; }
-        .meta { text-align: center; color: #6B7280; margin-bottom: 20px; font-size: 14px; }
-        .error-item { border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
-        .error-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .subject-tag { background: #4F46E5; color: white; padding: 4px 10px; border-radius: 4px; font-size: 13px; }
-        .type-tag { background: #818CF8; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
-        .date { color: #6B7280; font-size: 13px; }
-        .question-num { color: #4F46E5; font-weight: 700; margin-bottom: 8px; }
-        .question-text { white-space: pre-wrap; font-size: 15px; line-height: 1.8; margin-bottom: 10px; }
-        .question-image { max-width: 100%; max-height: 300px; border-radius: 4px; margin: 8px 0; }
-        .ai-answer { background: #F3F4F6; border-left: 3px solid #4F46E5; padding: 12px; margin-top: 12px; border-radius: 4px; font-size: 14px; line-height: 1.7; }
-        .ai-answer h3 { color: #4F46E5; font-size: 14px; margin: 8px 0 4px; }
-        .answer-line { border-top: 1px dashed #E5E7EB; height: 30px; margin-top: 12px; }
-        .print-btn { display: block; margin: 20px auto; padding: 12px 24px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
-        .print-btn:hover { background: #4338CA; }
-        @media print { .print-btn { display: none; } }
-      </style>`;
-    const now = new Date().toLocaleString('zh-CN');
-    let itemsHTML = selected.map(function (error, idx) {
-      const subject = STATE.subjects.find(function (s) { return s.id === error.subjectId; });
-      const subjectName = subject ? subject.name : '未分类';
-      const typeTag = error.questionType ? '<span class="type-tag">' + escapeHTML(error.questionType) + '</span>' : '';
-      const imageHTML = error.imageData ? '<img src="' + error.imageData + '" class="question-image">' : '';
-      let answerHTML = '';
+    var now = new Date().toLocaleString("zh-CN");
+    var items = selected.map(function(error, idx) {
+      var subj = STATE.subjects.find(function(s) { return s.id === error.subjectId; });
+      var sName = subj ? subj.name : "未分类";
+      var t = error.questionType ? "<span class=type-tag>" + escapeHTML(error.questionType) + "</span>" : "";
+      var img = error.imageData ? "<img src=" + error.imageData + " class=error-image>" : "";
+      var ans = "";
       if (error.aiAnswer) {
-        let ans = String(error.aiAnswer);
-        if (typeof marked !== 'undefined' && marked.parse) {
-          try { ans = marked.parse(ans); } catch (e) { ans = ans.replace(/\n/g, '<br>'); }
-        } else {
-          ans = ans.replace(/## (.+)/g, '<h3>$1</h3>').replace(/\n/g, '<br>');
-        }
-        answerHTML = '<div class="ai-answer"><strong>AI 解答：</strong>' + ans + '</div>';
-      } else {
-        answerHTML = '<div class="answer-line"></div><div class="answer-line"></div><div class="answer-line"></div>';
-      }
-      return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + renderTextToHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
-    }).join('');
+        var a = String(error.aiAnswer);
+        if (typeof marked !== "undefined" && marked.parse) {
+          try { ans = marked.parse(a); } catch(e) { ans = a.replace(/\n/g,"<br>"); }
+        } else { ans = a.replace(/## (.+)/g,"<h3>$1</h3>").replace(/\n/g,"<br>"); }
+        ans = "<details><summary>AI 解答</summary><div class=ai-answer>" + ans + "</div></details>";
+      } else { ans = "<div class=answer-line></div><div class=answer-line></div>"; }
+      return "<div class=error-item><div class=error-header><span class=subject-tag>" + escapeHTML(sName) + "</span>" + t + "<span class=date>" + new Date(error.createdAt).toLocaleDateString("zh-CN") + "</span></div><div class=question-num>第 " + (idx+1) + " 题</div>" + img + "<div class=question-text>" + escapeHTML(error.ocrText) + "</div>" + ans + "</div>";
+    }).join("");
 
-    // 打印按钮：移动端友好
-    const printButtonHTML = '<button class="print-btn" onclick="window.print()">🖨️ 点击打印 / 保存为 PDF</button>';
+    // 使用数据 URI 生成内联 CSS
+    var printCSS = "<link rel=stylesheet href=style.css?v=" + APP_VERSION + ">";
 
-    const fullHTML = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + printButtonHTML + '</body></html>';
+    var overlayHTML = "<div id=printOverlayWrap class=print-overlay>" +
+      "<div class=print-topbar>" +
+        "<span>📓 打印预览 · " + selected.length + " 道题</span>" +
+        "<div>" +
+          "<button onclick=document.getElementById(\"printOverlayWrap\").remove() class=btn-print-close>✕ 关闭</button>" +
+          "<button onclick=\"window.print();setTimeout(function(){var e=document.getElementById(\\\"printOverlayWrap\\\");if(e)e.remove();},1000)\" class=btn-print-go>🖨️ 打印 / 保存 PDF</button>" +
+        "</div>" +
+      "</div>" +
+      "<div class=print-content>" +
+        printCSS +
+        "<h1 class=print-title>📓 我的错题本</h1>" +
+        "<div class=print-meta>打印时间：" + now + " · 共 " + selected.length + " 道题</div>" +
+        items +
+      "</div>" +
+    "</div>";
 
-    // 简化方案：直接在当前页面显示打印内容（最可靠的方案，兼容所有设备）
-    // 之前的 iframe 方案在移动端会卡住（opacity:0 的 iframe 不会触发 onload）
-    openPrintInCurrentPage(fullHTML, selected.length);
+    document.body.insertAdjacentHTML("beforeend", overlayHTML);
+    showToast("打印预览已打开（" + selected.length + " 道题）", "success");
+
+    var sv = localStorage.getItem(APP_VERSION_KEY);
+    if (sv && sv !== APP_VERSION) { setTimeout(function() { showToast("检测到新版本 v" + APP_VERSION + "，已更新", "success"); }, 2000); }
+    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
   }
 
-  // 在当前页面打开打印预览（移动端友好 + 桌面端友好）
-  function openPrintInCurrentPage(htmlContent, count) {
-    // 保存当前页面完整状态（包括所有 event listener）
-    var savedBodyHTML = document.body.innerHTML;
-    var savedTitle = document.title;
-
-    // 提取打印页面的 body 内容（去掉 <body> 标签本身）
-    var bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-    var printBodyContent = bodyMatch ? bodyMatch[1] : htmlContent;
-
-    // 构建打印页面的包装（保留返回按钮和打印按钮）
-    var wrappedHTML = '<div id="printOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:white;z-index:99998;overflow:auto;padding:20px">' +
-      '<div style="position:fixed;top:10px;right:10px;z-index:99999;display:flex;gap:8px">' +
-        '<button id="printDoBtn" style="padding:10px 20px;background:#4F46E5;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)">🖨️ 打印 / 保存 PDF</button>' +
-        '<button id="printBackBtn" style="padding:10px 16px;background:#6B7280;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)">← 返回</button>' +
-      '</div>' +
-      printBodyContent +
-    '</div>';
-
-    // 替换为打印内容
-    document.title = '错题打印 - ' + count + '道题';
-    document.body.innerHTML = wrappedHTML;
-
-    // 绑定打印按钮
-    var doBtn = document.getElementById('printDoBtn');
-    if (doBtn) {
-      doBtn.onclick = function() {
-        showToast('正在打开打印对话框...', 'info');
-        setTimeout(function() {
-          try {
-            window.print();
-          } catch (e) {
-            showToast('打印失败：' + e.message, 'error');
-          }
-        }, 100);
-      };
-    }
-
-    // 绑定返回按钮
-    var backBtn = document.getElementById('printBackBtn');
-    if (backBtn) {
-      backBtn.onclick = function() {
-        document.body.innerHTML = savedBodyHTML;
-        document.title = savedTitle;
-        // 重新绑定事件（因为 DOM 被替换了）
-        setTimeout(function() {
-          init();
-        }, 50);
-      };
-    }
-
-    showToast('已打开打印预览（共 ' + count + ' 道题），点击右上角「打印 / 保存 PDF」按钮', 'success');
-  }
   function toggleSelectAll() {
     const checkboxes = $$('.error-checkbox');
     const allChecked = checkboxes.every(function (cb) { return cb.checked; });
