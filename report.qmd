@@ -307,6 +307,29 @@ lang: zh-CN
 - **移动端与桌面端的行为差异**——iOS Safari 对 iframe、window.open、print() 都有更严格的限制
 - **HTTP 缓存是无声的杀手**——`v=N` 参数是简单但有效的缓存破坏手段
 
+## 瓶颈 11：多部署环境 + 打印 iframe onload + 主题切换两击
+
+**我们面临的核心挑战**：三个互相叠加的问题：(1) Codebuddy 部署环境与 GitHub 独立，用户使用的是旧代码；(2) 打印按钮在 PC 和手机端都没有反应；(3) 初次切换深色/白天模式需要点两次。
+
+**我们在哪里卡住了**：
+
+1. **Codebuddy 部署是独立的早期环境**——早期创建的 Codebuddy 部署（`5715cd46...app.codebuddy.work`）与 GitHub 仓库完全分离，git push 不会影响其上的代码。用户通过该链接重新安装后，看到的仍是旧代码，导致 OCR 错误、测试按钮无反应等问题持续存在
+2. **iframe 的 `onload` 在 `opacity:0` 状态下不触发**——iOS Safari 对不可见的 iframe 有严格限制，如果 iframe 被设置为 `opacity:0`，其 `onload` 事件永远不会触发，导致后续 `openPrintInCurrentPage` 永远不被调用，用户看到「打印按钮无反应」
+3. **主题切换逻辑缺陷**——`dataset.theme` 初始为 `'auto'`，第一次点击时 `cur='auto'`，`next = cur === 'dark' ? 'light' : 'dark'` 总是得到 `'light'`。如果用户系统是浅色模式，视觉上无变化，必须再点一次才能切换到深色
+
+**为应对瓶颈所做的调整**：
+
+1. 引导用户使用 GitHub Pages 版本（https://Zy1222dgbsw.github.io/error-notebook-app/），并同步更新安装指南中的链接
+2. 彻底移除 iframe 步骤，`printSelectedErrors` 直接调用 `openPrintInCurrentPage`，避免 `onload` 不触发的陷阱
+3. 主题切换时使用 `window.matchMedia('(prefers-color-scheme: dark)').matches` 检测系统真实模式
+
+**我们找到的解决方案**：
+
+1. **链接统一**：所有 `btnCopyLink` 复制链接和 `<code class="install-link">` 显示链接改为 GitHub Pages URL
+2. **打印极简化**：直接替换 `document.body.innerHTML` 为打印内容，配固定定位的打印/返回按钮
+3. **主题智能检测**：`cur='auto'` 时读取系统偏好作为 `actualMode`，确保第一次点击就是真正的切换
+4. **添加切换反馈**：切换后显示 toast「已切换到深色/浅色模式」
+
 # Git 版本控制
 
 本项目通过 Git 进行版本控制，提交历史完整记录了开发过程。以下是关键提交节点：
@@ -327,9 +350,8 @@ lang: zh-CN
 | docs: 添加期末报告 | report.qmd + report.pdf | v1.0.2 |
 | fix: 修复测试 API Key | style.display 修复 + info toast | v1.0.3 |
 | fix: 修复打印按钮 | iframe 打印方案 | v1.0.3 |
-| feat: 学科管理 | 学科管理与 localStorage | v0.5 |
-| feat: 深色模式 + PWA | 深色模式与 PWA 支持 | v0.6 |
-| feat: 题型分类 | 自定义题型系统 | v0.7 |
+| fix: 打印+版本检测 | 移动端打印 + 缓存破除 | v15 |
+| fix: 打印+主题+链接 | 极简打印 + 主题智能检测 + 链接统一 | v16 |
 | feat: 大模型替换 OCR | Qwen3-VL 系列视觉大模型 | v0.8 |
 | feat: 公式 Markdown 渲染 | KaTeX + marked.js 全场景渲染 | v0.9 |
 | feat: DeepSeek-V3 升级 | AI 解答模型升级 | v1.0 |
