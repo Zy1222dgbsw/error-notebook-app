@@ -1106,8 +1106,3 @@
     init();
   }
 })();
-
-cd path/to/your/error-notebook-app
-git checkout feature/llm-ocr-markdown
-git push origin feature/llm-ocr-markdown
-
