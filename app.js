@@ -3,10 +3,8 @@
    核心功能：拍照OCR识别 + AI解答 + 学科分类管理
    所有逻辑统一在 DOMContentLoaded 内执行
    ============================================================ */
-
 (function () {
   'use strict';
-
   // ===== 全局状态 =====
   const STATE = {
     subjects: [],
@@ -15,7 +13,6 @@
     cropSelection: null,
     ocrResult: ''
   };
-
   const DEFAULT_SUBJECTS = [
     { id: 'math', name: '数学', color: '#4F46E5',
       types: ['选择题', '填空题', '解答题', '判断题', '应用题', '证明题', '计算题'] },
@@ -26,11 +23,9 @@
     { id: 'chemistry', name: '化学', color: '#EF4444',
       types: ['选择题', '填空题', '解答题', '判断题', '实验题', '计算题', '推断题'] }
   ];
-
   // ===== DOM 工具 =====
   function $(id) { return document.getElementById(id); }
   function $$(sel) { return document.querySelectorAll(sel); }
-
   function showToast(message, type) {
     type = type || 'success';
     const container = $('toastContainer');
@@ -44,13 +39,11 @@
       if (toast.parentNode) toast.parentNode.removeChild(toast);
     }, 3000);
   }
-
   function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = String(str == null ? '' : str);
     return div.innerHTML;
   }
-
   // ===== 数据持久化 =====
   function loadData() {
     try {
@@ -75,15 +68,12 @@
       STATE.errors = [];
     }
   }
-
   function saveSubjects() {
     try { localStorage.setItem('errorNotebook_subjects', JSON.stringify(STATE.subjects)); } catch (e) {}
   }
-
   function saveErrors() {
     try { localStorage.setItem('errorNotebook_errors', JSON.stringify(STATE.errors)); } catch (e) {}
   }
-
   // ===== 标签切换 =====
   function switchTab(tab) {
     $$('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
@@ -96,7 +86,6 @@
     if (tab === 'subjects') renderSubjectList();
     if (tab === 'scan') updateSubjectSelect();
   }
-
   // ===== 学科管理 =====
   function addSubject() {
     const nameInput = $('newSubjectName');
@@ -121,7 +110,6 @@
     updateFilterSelect();
     showToast('学科「' + name + '」已添加', 'success');
   }
-
   function deleteSubject(id) {
     const subject = STATE.subjects.find(function (s) { return s.id === id; });
     if (!subject) return;
@@ -138,7 +126,6 @@
     updateFilterSelect();
     showToast('学科「' + subject.name + '」已删除', 'success');
   }
-
   // ===== 编辑学科 =====
   function openEditSubject(id) {
     const subject = STATE.subjects.find(function (s) { return s.id === id; });
@@ -149,7 +136,6 @@
     $('editSubjectOverlay').dataset.editId = id;
     $('editSubjectOverlay').hidden = false;
   }
-
   function saveEditSubject() {
     const id = $('editSubjectOverlay').dataset.editId;
     const subject = STATE.subjects.find(function (s) { return s.id === id; });
@@ -168,7 +154,6 @@
     updateFilterSelect();
     showToast('学科已更新 ✓', 'success');
   }
-
   function renderSubjectList() {
     const container = $('subjectList');
     if (!container) return;
@@ -182,7 +167,6 @@
       return '<div class="subject-item"><div class="subject-info"><span class="subject-color-dot" style="background:' + subject.color + '"></span><div><div class="subject-name">' + escapeHTML(subject.name) + '</div><div class="subject-types-preview">' + escapeHTML(typesPreview.replace(/^ · /, '')) + '</div></div><span class="subject-count">' + count + ' 道错题</span></div><div class="subject-actions"><button class="btn btn-secondary btn-sm" data-action="edit-subject" data-id="' + subject.id + '">编辑</button><button class="btn btn-danger btn-sm" data-action="delete-subject" data-id="' + subject.id + '">删除</button></div></div>';
     }).join('');
   }
-
   function updateSubjectSelect() {
     const select = $('subjectSelect');
     if (!select) return;
@@ -192,7 +176,6 @@
     }).join('');
     updateQuestionTypeSelect();
   }
-
   function updateQuestionTypeSelect() {
     const typeSelect = $('questionTypeSelect');
     if (!typeSelect) return;
@@ -208,7 +191,6 @@
       }).join('');
     }
   }
-
   function updateFilterSelect() {
     const select = $('filterSubject');
     if (!select) return;
@@ -217,10 +199,8 @@
       return '<option value="' + s.id + '"' + (s.id === currentValue ? ' selected' : '') + '>' + escapeHTML(s.name) + '</option>';
     }).join('');
   }
-
   // ===== 拍照 / 上传 + 全屏裁剪 =====
   var cropCtx = null;
-
   function handleImageFile(file) {
     if (!file || !file.type || !file.type.startsWith('image/')) {
       showToast('请选择图片文件', 'error'); return;
@@ -233,7 +213,6 @@
     };
     reader.readAsDataURL(file);
   }
-
   function openCropModal(dataUrl) {
     var modal = $('cropModal');
     var img = $('cropImage');
@@ -246,18 +225,15 @@
     $('uploadPlaceholder').hidden = true;
     $('ocrSection').hidden = true;
   }
-
   function closeCropModal() {
     var modal = $('cropModal');
     if (modal) modal.hidden = true;
   }
-
   function initCropFrame() {
     var img = $('cropImage');
     var frame = $('cropFrame');
     var stage = $('cropStage');
     if (!img || !frame || !stage) return;
-
     // 等下一帧让布局稳定
     requestAnimationFrame(function () {
       var ir = img.getBoundingClientRect();
@@ -267,7 +243,6 @@
       var imgTop = ir.top - sr.top;
       var imgW = ir.width;
       var imgH = ir.height;
-
       // 默认裁剪框：占图片 80% 区域，居中
       var padX = imgW * 0.10;
       var padY = imgH * 0.10;
@@ -280,7 +255,6 @@
       updateCropFrame();
     });
   }
-
   function updateCropFrame() {
     var frame = $('cropFrame');
     var sel = STATE.cropSelection;
@@ -290,12 +264,10 @@
     frame.style.width = sel.w + 'px';
     frame.style.height = sel.h + 'px';
   }
-
   function bindCropDrag() {
     var stage = $('cropStage');
     var frame = $('cropFrame');
     if (!stage || !frame) return;
-
     // 移动整个 frame
     function onFrameDown(e) {
       e.preventDefault();
@@ -303,7 +275,6 @@
       var p = getStagePos(e);
       var sel = STATE.cropSelection;
       var ox = p.x - sel.x, oy = p.y - sel.y;
-
       function move(ev) {
         var p2 = getStagePos(ev);
         var imgRect = getImgRect();
@@ -319,7 +290,6 @@
       stage.addEventListener('pointerup', up);
     }
     frame.addEventListener('pointerdown', onFrameDown);
-
     // 拖拽四角
     $$('.crop-corner').forEach(function (corner) {
       var which = corner.dataset.corner;
@@ -329,14 +299,12 @@
         var p = getStagePos(e);
         var start = { x: p.x, y: p.y, sel: JSON.parse(JSON.stringify(STATE.cropSelection)) };
         var imgRect = getImgRect();
-
         function move(ev) {
           var p2 = getStagePos(ev);
           var dx = p2.x - start.x, dy = p2.y - start.y;
           var s = start.sel;
           var ns = { x: s.x, y: s.y, w: s.w, h: s.h };
           var minSize = 50;
-
           if (which === 'tl') {
             ns.x = clamp(s.x + dx, imgRect.left, s.x + s.w - minSize);
             ns.y = clamp(s.y + dy, imgRect.top, s.y + s.h - minSize);
@@ -365,19 +333,16 @@
         stage.addEventListener('pointerup', up);
       });
     });
-
     // 裁剪框底部按钮
     $('cropCancel').addEventListener('click', cancelCrop);
     $('cropConfirm').addEventListener('click', applyCrop);
   }
-
   function getStagePos(e) {
     var stage = $('cropStage');
     var r = stage.getBoundingClientRect();
     var c = e.touches && e.touches[0] ? e.touches[0] : e;
     return { x: c.clientX - r.left, y: c.clientY - r.top };
   }
-
   function getImgRect() {
     var img = $('cropImage');
     var stage = $('cropStage');
@@ -385,9 +350,7 @@
     var sr = stage.getBoundingClientRect();
     return { left: ir.left - sr.left, top: ir.top - sr.top, w: ir.width, h: ir.height };
   }
-
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
   function applyCrop() {
     var sel = STATE.cropSelection;
     var img = $('cropImage');
@@ -397,17 +360,14 @@
     var imgRect = getImgRect();
     var scaleX = img.naturalWidth / imgRect.w;
     var scaleY = img.naturalHeight / imgRect.h;
-
     var cropX = (sel.x - imgRect.left) * scaleX;
     var cropY = (sel.y - imgRect.top) * scaleY;
     var cropW = sel.w * scaleX;
     var cropH = sel.h * scaleY;
-
     var outCanvas = document.createElement('canvas');
     outCanvas.width = cropW;
     outCanvas.height = cropH;
     outCanvas.getContext('2d').drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
     STATE.currentImage = outCanvas.toDataURL('image/jpeg', 0.9);
     var preview = $('imagePreview');
     if (preview) preview.src = STATE.currentImage;
@@ -419,7 +379,6 @@
     $('saveSection').hidden = true;
     showToast('裁剪完成，点击「开始识别」提取文字', 'success');
   }
-
   function cancelCrop() {
     closeCropModal();
     // 取消 → 用原图直接进入 OCR
@@ -431,7 +390,6 @@
     $('ocrProgress').hidden = true;
     $('saveSection').hidden = true;
   }
-
   function resetUpload() {
     STATE.currentImage = null;
     STATE.cropSelection = null;
@@ -447,7 +405,6 @@
     $('ocrProgress').hidden = true;
     var fi = $('fileInput'); if (fi) fi.value = '';
   }
-
   // ===== OCR 识别（硅基流动视觉模型） =====
   function startOCR() {
     var apiKey = localStorage.getItem('errorNotebook_siliconflowKey') || localStorage.getItem('errorNotebook_apiKey') || '';
@@ -457,7 +414,6 @@
       return;
     }
     if (!STATE.currentImage) { showToast('请先拍摄或选择图片', 'warning'); return; }
-
     $('ocrProgress').hidden = false;
     $('ocrResult').hidden = true;
     var btn = $('btnStartOCR'); btn.disabled = true;
@@ -465,12 +421,10 @@
     var progressText = $('progressText');
     progressFill.style.width = '30%';
     progressText.textContent = '正在调用 AI 识别文字...';
-
     // 提取 base64 部分（去掉 data:image/...;base64, 前缀）
     var base64 = STATE.currentImage.split(',')[1] || STATE.currentImage;
     var mime = STATE.currentImage.match(/data:(image\/\w+)/);
     var imageUrl = 'data:' + (mime ? mime[1] : 'image/jpeg') + ';base64,' + base64;
-
     // 如果图片过大（>1MB base64），压缩后再发送
     if (imageUrl.length > 1 * 1024 * 1024) {
       progressText.textContent = '图片过大，正在压缩...';
@@ -483,10 +437,8 @@
       });
       return;
     }
-
     callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn);
   }
-
   // 压缩图片到指定最大宽
   function compressImage(dataUrl, maxWidth, quality, callback) {
     var img = new Image();
@@ -501,25 +453,19 @@
     };
     img.src = dataUrl;
   }
-
   function callSiliconFlowOCR(apiKey, imageUrl, progressFill, progressText, btn) {
     // 多模型降级：依次尝试，失败则换下一个
     var models = [
-      'Qwen/Qwen2.5-VL-7B-Instruct',
-      'Qwen/Qwen2-VL-7B-Instruct',
-      'Qwen/Qwen-VL-Chat',
-      'THUDM/glm-4v-9b',
-      '01-ai/Yi-VL-6B-Chat',
-      'OpenGVLab/InternVL2-8B',
-      'Pro/Qwen/Qwen2-VL-7B-Instruct'
+      'Qwen/Qwen3-VL-32B-Instruct',
+      'Qwen/Qwen3-VL-30B-A3B-Instruct',
+      'Qwen/Qwen3-VL-8B-Instruct',
+      'zai-org/GLM-4.5V'
     ];
     tryWithModel(models, 0);
-
     function tryWithModel(modelList, idx) {
       var model = modelList[idx];
       progressText.textContent = '正在调用 ' + model + ' 识别...';
       console.log('[OCR] 尝试模型:', model, '图片大小:', Math.round(imageUrl.length / 1024) + 'KB');
-
       fetch('https://api.siliconflow.cn/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -528,18 +474,17 @@
           messages: [{
             role: 'user',
             content: [
-              { type: 'text', text: '请识别这张图片中的所有文字内容，完整输出。如果包含数学公式，请用 LaTeX 格式输出（如 $x^2$）。只输出文字，不要解释。' },
+              { type: 'text', text: '请仔细识别这张图片中的所有文字内容，完整准确地输出。要求：\n1. 如果包含数学公式，请用 LaTeX 格式输出，行内公式用 $...$ 包裹，独立公式用 $$...$$ 包裹\n2. 保持原文的层次结构和标点符号\n3. 如有表格、列表等结构，用 Markdown 格式输出\n4. 只输出识别到的文字内容，不要添加任何解释或说明' },
               { type: 'image_url', image_url: { url: imageUrl } }
             ]
           }],
           max_tokens: 2048,
-          temperature: 0.1,
-          stream: false
+          temperature: 0.7,
         })
       }).then(function (r) {
         if (!r.ok) {
           return r.text().then(function (txt) {
-            throw new Error(model + ' HTTP ' + r.status + ' - ' + (txt || r.statusText));
+            throw new Error(model + ' HTTP ' + r.status + ' - ' + (txt ? txt.substring(0, 200) : r.statusText));
           });
         }
         return r.json();
@@ -558,8 +503,12 @@
         $('ocrText').textContent = text;
         $('ocrResult').hidden = false;
         $('saveSection').hidden = false;
+        var previewEl = $('ocrPreview');
+        if (previewEl) {
+          renderContentToElement(previewEl, text);
+        }
         updateSubjectSelect();
-        showToast('AI 文字识别完成！', 'success');
+        showToast('AI 文字识别完成！支持 Markdown 和公式渲染预览！', 'success');
         setTimeout(function () { $('ocrProgress').hidden = true; }, 500);
         btn.disabled = false;
       }).catch(function (err) {
@@ -577,7 +526,6 @@
       });
     }
   }
-
   // ===== 保存错题 =====
   function saveError() {
     const subjectId = $('subjectSelect').value;
@@ -602,7 +550,6 @@
     updateSubjectSelect();
     showToast('错题已保存！', 'success');
   }
-
   // ===== 错题列表 =====
   function renderErrorList() {
     const container = $('errorList');
@@ -613,22 +560,40 @@
     let filtered = STATE.errors;
     if (filterSubject !== 'all') filtered = filtered.filter(function (e) { return e.subjectId === filterSubject; });
     if (searchQuery) filtered = filtered.filter(function (e) { return e.ocrText.toLowerCase().includes(searchQuery); });
-
     if (filtered.length === 0) {
       container.innerHTML = '<div class="empty-state"><span class="empty-icon">📝</span><p>' + (STATE.errors.length === 0 ? '还没有错题记录' : '没有找到匹配的错题') + '</p><p class="hint">' + (STATE.errors.length === 0 ? '去「拍照录入」添加你的第一道错题吧！' : '试试调整筛选条件') + '</p></div>';
       return;
     }
-
     container.innerHTML = filtered.map(function (error) {
       const subject = STATE.subjects.find(function (s) { return s.id === error.subjectId; });
       const subjectName = subject ? subject.name : '未分类';
       const subjectColor = subject ? subject.color : '#9CA3AF';
       const typeTag = error.questionType ? '<span class="type-badge">' + escapeHTML(error.questionType) + '</span>' : '';
       const date = new Date(error.createdAt).toLocaleString('zh-CN');
-      return '<div class="error-card"><div class="error-card-header"><input type="checkbox" class="error-checkbox" data-action="toggle-select" data-id="' + error.id + '" data-print="1"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片" loading="lazy">' : '') + '<div class="error-text" data-action="toggle-text">' + escapeHTML(error.ocrText) + '</div>' + (error.aiAnswer ? '<details class="ai-answer-print"><summary>🤖 AI 解答</summary><div class="ai-answer-content">' + formatAIAnswer(error.aiAnswer) + '</div></details>' : '') + '</div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
+      return '<div class="error-card"><div class="error-card-header"><input type="checkbox" class="error-checkbox" data-action="toggle-select" data-id="' + error.id + '" data-print="1"><span class="subject-badge" style="background:' + subjectColor + '">📚 ' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="error-date">' + escapeHTML(date) + '</span></div><div class="error-card-body">' + (error.imageData ? '<img src="' + error.imageData + '" class="error-image" alt="错题图片" loading="lazy">' : '') + '<div class="error-text rendered-content" data-action="toggle-text">' + renderTextToHTML(error.ocrText) + '</div>' + (error.aiAnswer ? '<details class="ai-answer-print"><summary>🤖 AI 解答</summary><div class="ai-answer-content">' + formatAIAnswer(error.aiAnswer) + '</div></details>' : '') + '</div><div class="error-card-footer"><button class="btn btn-primary btn-sm" data-action="ask-ai" data-id="' + error.id + '">🤖 AI解答</button><button class="btn btn-danger btn-sm" data-action="delete-error" data-id="' + error.id + '">🗑 删除</button></div></div>';
     }).join('');
+    // 渲染 Markdown 和 LaTeX 公式
+    renderErrorListContent();
   }
-
+  // 渲染错题列表中的公式和 Markdown
+  function renderErrorListContent() {
+    var containers = document.querySelectorAll('.error-text.rendered-content, .ai-answer-content');
+    containers.forEach(function (el) {
+      if (typeof renderMathInElement !== 'undefined') {
+        try {
+          renderMathInElement(el, {
+            delimiters: [
+              { left: '$$', right: '$$', display: true },
+              { left: '$', right: '$', display: false },
+              { left: '\\(', right: '\\)', display: false },
+              { left: '\\[', right: '\\]', display: true }
+            ],
+            throwOnError: false
+          });
+        } catch (e) {}
+      }
+    });
+  }
   function deleteError(id) {
     if (!confirm('确定删除这道错题吗？')) return;
     STATE.errors = STATE.errors.filter(function (e) { return e.id !== id; });
@@ -637,7 +602,6 @@
     updateFilterSelect();
     showToast('错题已删除', 'success');
   }
-
   // ===== 打印功能 =====
   function printSelectedErrors() {
     const checkboxes = $$('.error-checkbox:checked');
@@ -647,7 +611,6 @@
     }
     const selectedIds = checkboxes.map(function (cb) { return cb.dataset.id; });
     const selected = STATE.errors.filter(function (e) { return selectedIds.indexOf(e.id) >= 0; });
-
     // 构建打印 HTML
     const printWin = window.open('', '_blank', 'width=800,height=900');
     if (!printWin) {
@@ -674,28 +637,24 @@
         .answer-line { border-top: 1px dashed #E5E7EB; height: 30px; margin-top: 12px; }
       </style>`;
     const now = new Date().toLocaleString('zh-CN');
-
     let itemsHTML = selected.map(function (error, idx) {
       const subject = STATE.subjects.find(function (s) { return s.id === error.subjectId; });
       const subjectName = subject ? subject.name : '未分类';
       const typeTag = error.questionType ? '<span class="type-tag">' + escapeHTML(error.questionType) + '</span>' : '';
       const imageHTML = error.imageData ? '<img src="' + error.imageData + '" class="question-image">' : '';
       const answerHTML = error.aiAnswer ? '<div class="ai-answer"><strong>AI 解答：</strong>' + formatAIAnswer(error.aiAnswer) + '</div>' : '<div class="answer-line"></div><div class="answer-line"></div><div class="answer-line"></div>';
-      return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + escapeHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
+      return '<div class="error-item"><div class="error-header"><div><span class="subject-tag">' + escapeHTML(subjectName) + '</span>' + typeTag + '<span class="date">第 ' + (idx + 1) + ' 题 · ' + new Date(error.createdAt).toLocaleDateString('zh-CN') + '</span></div></div><div class="question-num">第 ' + (idx + 1) + ' 题</div>' + imageHTML + '<div class="question-text">' + renderTextToHTML(error.ocrText) + '</div>' + answerHTML + '</div>';
     }).join('');
-
     printWin.document.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + '<script>window.onload = function() { setTimeout(function() { window.print(); }, 200); };<\/script></body></html>');
     printWin.document.close();
     showToast('已生成打印预览', 'success');
   }
-
   function toggleSelectAll() {
     const checkboxes = $$('.error-checkbox');
     const allChecked = checkboxes.every(function (cb) { return cb.checked; });
     checkboxes.forEach(function (cb) { cb.checked = !allChecked; });
     $('btnSelectAll').textContent = allChecked ? '全选' : '取消全选';
   }
-
   // ===== AI 智能解答 =====
   function renderMarkdown(text) {
     if (!text) return '';
@@ -704,7 +663,29 @@
     }
     return text.replace(/\n/g, '<br>');
   }
-
+  // 统一渲染函数：将 Markdown + LaTeX 公式渲染到指定 DOM 元素
+  function renderContentToElement(element, text) {
+    if (!element || !text) return;
+    var html = renderMarkdown(text);
+    element.innerHTML = html;
+    if (typeof renderMathInElement !== 'undefined') {
+      try {
+        renderMathInElement(element, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false
+        });
+      } catch (e) { console.warn('[Render] KaTeX error:', e); }
+    }
+  }
+  function renderTextToHTML(text) {
+    if (!text) return '';
+    return renderMarkdown(text);
+  }
   function askAI(errorId) {
     var error = STATE.errors.find(function (e) { return e.id === errorId; });
     if (!error) return;
@@ -713,7 +694,6 @@
     $('answerError').hidden = true;
     $('answerLoading').hidden = false;
     $('modalOverlay').hidden = false;
-
     callAI(error.ocrText).then(function (answer) {
       $('answerLoading').hidden = true;
       if (answer) {
@@ -730,13 +710,11 @@
       $('answerError').hidden = false;
     });
   }
-
   function callAI(question) {
     var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
     var apiKey = localStorage.getItem('errorNotebook_siliconflowKey') || localStorage.getItem('errorNotebook_apiKey') || '';
     var customEndpoint = localStorage.getItem('errorNotebook_customEndpoint') || '';
     var systemPrompt = '你是一位经验丰富的老师。请为学生解答这道错题。请按以下 Markdown 格式回答：\n\n## 正确答案\n给出正确答案\n\n## 解题思路\n详细解释解题步骤和思路\n\n## 知识点\n列出本题涉及的关键知识点\n\n## 易错提醒\n指出学生容易出错的地方\n\n请用中文回答。涉及数学公式请用 LaTeX 语法（如 $x^2$），代码用反引号包裹。';
-
     // 硅基流动
     if (provider === 'siliconflow') {
       if (!apiKey) return Promise.resolve(generateFallbackAnswer(question));
@@ -744,7 +722,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
         body: JSON.stringify({
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'deepseek-ai/DeepSeek-V3',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: question }],
           temperature: 0.7,
           max_tokens: 2000
@@ -753,7 +731,6 @@
         .then(function (data) { return data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content; })
         .catch(function () { return generateFallbackAnswer(question); });
     }
-
     // DeepSeek
     if (provider === 'deepseek') {
       if (!apiKey) return Promise.resolve(generateFallbackAnswer(question));
@@ -770,7 +747,6 @@
         .then(function (data) { return data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content; })
         .catch(function () { return generateFallbackAnswer(question); });
     }
-
     if (provider === 'custom') {
       if (!customEndpoint) return Promise.resolve(generateFallbackAnswer(question));
       return fetch(customEndpoint, {
@@ -784,7 +760,6 @@
         })
         .catch(function () { return generateFallbackAnswer(question); });
     }
-
     // 默认 Pollinations
     return fetch('https://text.pollinations.ai/', {
       method: 'POST',
@@ -802,12 +777,10 @@
       })
       .catch(function () { return generateFallbackAnswer(question); });
   }
-
   function generateFallbackAnswer(question) {
     return '## 温馨提示\n\nAI服务暂时不可用。请尝试：\n\n1. 检查网络连接\n2. 在「设置」中配置硅基流动 API 密钥\n3. 访问 [cloud.siliconflow.cn](https://cloud.siliconflow.cn) 注册并获取密钥\n\n---\n\n**题目内容**\n\n' + question + '\n\n---\n\n**建议**：翻看课本对应章节或与同学讨论。';
   }
-
-  function formatAIAnswer(text) {
+  function formatAIAnswer(text, targetEl) {
     var html = String(text);
     // 1. 用 marked 转 Markdown → HTML
     if (typeof marked !== 'undefined' && marked.parse) {
@@ -821,15 +794,24 @@
     // 2. KaTeX 渲染数学公式
     if (typeof renderMathInElement !== 'undefined') {
       setTimeout(function () {
-        var el = $('answerContent');
-        if (el) {
-          try { renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }] }); } catch (e) {}
-        }
+        var containers = document.querySelectorAll('.ai-answer-content, .answer-content, #answerContent, .error-text.rendered-content');
+        containers.forEach(function (c) {
+          try {
+            renderMathInElement(c, {
+              delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false },
+                { left: '\\(', right: '\\)', display: false },
+                { left: '\\[', right: '\\]', display: true }
+              ],
+              throwOnError: false
+            });
+          } catch (e) {}
+        });
       }, 50);
     }
     return html;
   }
-
   // ===== 弹窗控制 =====
   function openSettings() {
     var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
@@ -839,12 +821,10 @@
     toggleProviderFields(provider);
     $('settingsOverlay').hidden = false;
   }
-
   function toggleProviderFields(provider) {
     $('apiKeyGroup').hidden = false;
     $('customEndpointGroup').hidden = (provider !== 'custom');
   }
-
   function saveSettings() {
     localStorage.setItem('errorNotebook_aiProvider', $('aiProvider').value);
     var apiKey = $('apiKey').value.trim();
@@ -854,7 +834,6 @@
     $('settingsOverlay').hidden = true;
     showToast('设置已保存', 'success');
   }
-
   // ===== 测试 API Key =====
   function testApiKey() {
     var apiKey = $('apiKey').value.trim();
@@ -863,19 +842,15 @@
     result.hidden = false;
     result.textContent = '⏳ 正在测试模型可用性...\n';
     var testModels = [
-      'Qwen/Qwen2.5-7B-Instruct',
-      'Qwen/Qwen2-7B-Instruct',
-      'Qwen/Qwen2.5-VL-7B-Instruct',
-      'Qwen/Qwen2-VL-7B-Instruct',
-      'Qwen/Qwen-VL-Chat',
-      'THUDM/glm-4v-9b',
-      '01-ai/Yi-VL-6B-Chat',
-      'OpenGVLab/InternVL2-8B',
-      'Pro/Qwen/Qwen2-VL-7B-Instruct'
+      'Qwen/Qwen3-VL-32B-Instruct',
+      'Qwen/Qwen3-VL-30B-A3B-Instruct',
+      'Qwen/Qwen3-VL-8B-Instruct',
+      'zai-org/GLM-4.5V',
+      'deepseek-ai/DeepSeek-V3',
+      'Qwen/Qwen3-32B'
     ];
     testModelOneByOne(testModels, 0, apiKey, result);
   }
-
   function testModelOneByOne(models, idx, apiKey, result) {
     if (idx >= models.length) {
       result.textContent += '\n\n✅ 测试完成！可用的模型标了 ✓';
@@ -907,7 +882,6 @@
       testModelOneByOne(models, idx + 1, apiKey, result);
     });
   }
-
   // ===== 初始化（DOMContentLoaded 内执行） =====
   function init() {
     console.log('[ErrorNotebook] 初始化开始');
@@ -916,12 +890,10 @@
     renderErrorList();
     updateSubjectSelect();
     updateFilterSelect();
-
     // 标签页
     $$('.tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
     });
-
     // 拍照 / 上传
     var uploadArea = $('uploadArea');
     uploadArea.addEventListener('click', function (e) {
@@ -934,7 +906,6 @@
     $('fileInput').addEventListener('change', function (e) {
       if (e.target.files.length > 0) handleImageFile(e.target.files[0]);
     });
-
     // 粘贴图片支持
     document.addEventListener('paste', function (e) {
       // 只在拍照录入 tab 时才响应粘贴
@@ -956,50 +927,99 @@
         }
       }
     });
-
     // 清除已上传图片
     $('btnClearImage').addEventListener('click', function (e) {
       e.stopPropagation();
       resetUpload();
       showToast('已清除', 'success');
     });
-
     uploadArea.addEventListener('dragover', function (e) { e.preventDefault(); uploadArea.classList.add('drag-over'); });
     uploadArea.addEventListener('dragleave', function () { uploadArea.classList.remove('drag-over'); });
     uploadArea.addEventListener('drop', function (e) {
       e.preventDefault(); uploadArea.classList.remove('drag-over');
       if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
     });
-
     // 裁剪弹窗的拖拽逻辑
     bindCropDrag();
-
     // OCR
-    $('btnStartOCR').addEventListener('click', startOCR);
+$('btnStartOCR').addEventListener('click', startOCR);
+    // OCR 文本编辑时实时更新预览
+    var ocrTextInput = $('ocrText');
+    if (ocrTextInput) {
+      ocrTextInput.addEventListener('input', function() {
+        var pv = $('ocrPreview');
+        if (pv && !$('ocrPreviewWrap').hidden) {
+          renderContentToElement(pv, ocrTextInput.textContent);
+        }
+      });
+    }
+    // 预览切换按钮
+    var btnPreview = $('btnTogglePreview');
+    if (btnPreview) {
+      btnPreview.addEventListener('click', function() {
+        var wrap = $('ocrPreviewWrap');
+        var pv = $('ocrPreview');
+        if (wrap.hidden) {
+          wrap.hidden = false;
+          if (pv) renderContentToElement(pv, $('ocrText').textContent);
+          btnPreview.textContent = '📝 编辑模式';
+        } else {
+          wrap.hidden = true;
+          btnPreview.textContent = '👁 预览渲染';
+        }
+      });
+    }
+    // OCR 文本编辑时实时更新预览
+    var ocrTextInput = $('ocrText');
+    if (ocrTextInput) {
+      ocrTextInput.addEventListener('input', function() {
+        var pv = $('ocrPreview');
+        if (pv && !$('ocrPreviewWrap').hidden) {
+          renderContentToElement(pv, ocrTextInput.textContent);
+        }
+      });
+    }
+    // 预览切换按钮
+    var btnPreview = $('btnTogglePreview');
+    if (btnPreview) {
+      btnPreview.addEventListener('click', function() {
+        var wrap = $('ocrPreviewWrap');
+        var pv = $('ocrPreview');
+        if (wrap.hidden) {
+          wrap.hidden = false;
+          if (pv) renderContentToElement(pv, $('ocrText').textContent);
+          btnPreview.textContent = '📝 编辑模式';
+        } else {
+          wrap.hidden = true;
+          btnPreview.textContent = '👁 预览渲染';
+        }
+      });
+    }
     $('btnSaveError').addEventListener('click', saveError);
     // 编辑工具栏
     $('btnClearText').addEventListener('click', function () {
       $('ocrText').textContent = '';
+      var pv = $('ocrPreview');
+      if (pv) pv.innerHTML = '';
       $('ocrText').focus();
     });
     $('btnConfirmText').addEventListener('click', function () {
       STATE.ocrResult = $('ocrText').textContent.trim();
-      showToast('内容已确认 ✓', 'success');
+      var pv = $('ocrPreview');
+      if (pv) renderContentToElement(pv, STATE.ocrResult);
+      showToast('内容已确认 ✓ Markdown 和公式已渲染', 'success');
       $('saveSection').hidden = false;
     });
     // 学科切换时联动题型
     $('subjectSelect').addEventListener('change', updateQuestionTypeSelect);
-
     // 学科管理
     $('btnAddSubject').addEventListener('click', addSubject);
     $('newSubjectName').addEventListener('keypress', function (e) { if (e.key === 'Enter') addSubject(); });
-
     // 错题筛选
     $('filterSubject').addEventListener('change', renderErrorList);
     $('searchInput').addEventListener('input', renderErrorList);
     $('btnSelectAll').addEventListener('click', toggleSelectAll);
     $('btnPrintSelected').addEventListener('click', printSelectedErrors);
-
     // ===== 设置弹窗（关键修复：每个按钮都单独绑定） =====
     $('btnSettings').addEventListener('click', openSettings);
     // 深色模式切换
@@ -1023,14 +1043,12 @@
     $('aiProvider').addEventListener('change', function (e) { toggleProviderFields(e.target.value); });
     $('btnSaveSettings').addEventListener('click', saveSettings);
     $('btnTestApi').addEventListener('click', testApiKey);
-
     // ===== AI 弹窗 =====
     $('btnCloseModal').addEventListener('click', function () { $('modalOverlay').hidden = true; });
     $('btnCloseModal2').addEventListener('click', function () { $('modalOverlay').hidden = true; });
     $('modalOverlay').addEventListener('click', function (e) {
       if (e.target === e.currentTarget) e.currentTarget.hidden = true;
     });
-
     // ===== 事件委托：错题卡片上的按钮 =====
     $('errorList').addEventListener('click', function (e) {
       const btn = e.target.closest('button[data-action]');
@@ -1046,7 +1064,6 @@
         e.target.classList.toggle('expanded');
       }
     });
-
     // ===== 事件委托：学科管理编辑/删除按钮 =====
     $('subjectList').addEventListener('click', function (e) {
       const btn = e.target.closest('button[data-action]');
@@ -1054,7 +1071,6 @@
       if (btn.dataset.action === 'delete-subject') deleteSubject(btn.dataset.id);
       else if (btn.dataset.action === 'edit-subject') openEditSubject(btn.dataset.id);
     });
-
     // ===== 编辑学科弹窗 =====
     $('btnCloseEditSubject').addEventListener('click', function () { $('editSubjectOverlay').hidden = true; });
     $('btnCancelEditSubject').addEventListener('click', function () { $('editSubjectOverlay').hidden = true; });
@@ -1062,7 +1078,6 @@
       if (e.target === e.currentTarget) e.currentTarget.hidden = true;
     });
     $('btnSaveEditSubject').addEventListener('click', saveEditSubject);
-
     // ===== 安装指南弹窗 =====
     $('btnInstallGuide').addEventListener('click', function () { $('installGuideOverlay').hidden = false; });
     $('btnCloseInstallGuide').addEventListener('click', function () { $('installGuideOverlay').hidden = true; });
@@ -1089,16 +1104,13 @@
         showToast('链接已复制！粘贴到手机浏览器即可打开', 'success');
       }
     });
-
     // ===== 初始 Provider 显示 =====
     var provider = localStorage.getItem('errorNotebook_aiProvider') || 'siliconflow';
     $('aiProvider').value = provider;
     $('aiProvider').value = provider;
     toggleProviderFields(provider);
-
     console.log('[ErrorNotebook] 初始化完成，按钮事件已绑定');
   }
-
   // ===== 启动 =====
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
