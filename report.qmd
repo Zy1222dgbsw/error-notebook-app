@@ -243,6 +243,38 @@ lang: zh-CN
 3. 在 `activate` 事件中遍历所有缓存，删除不属于当前版本的旧缓存
 4. 使用 `clients.claim()` 确保新的 Service Worker 立即生效
 
+## 瓶颈 8：测试 API Key 按钮点击无视觉反馈
+
+**我们面临的核心挑战**：在设置弹窗中点击「测试 API Key」按钮后，期望看到模型可用性测试结果，但实际没有任何视觉反馈。
+
+**我们在哪里卡住了**：HTML 元素 `<div id="apiTestResult" style="display:none">` 使用了**内联样式** `display:none`，其 CSS 优先级高于 JS 设置的 `element.hidden = false`。即使 JS 把 `hidden` 属性设为 false，内联 `display:none` 仍然生效，结果区始终隐藏，导致用户点击按钮后看不到任何反馈。
+
+**为应对瓶颈所做的调整**：放弃通过 `hidden` 属性控制显隐，改用 `element.style.display = 'block'` 显式操作内联样式。同时为 showToast 函数增加 `info` 类型（蓝色提示），延长显示时间到 4 秒。
+
+**我们找到的解决方案**：
+
+1. 使用 `result.style.display = 'block'` 显式设置内联样式，绕过优先级问题
+2. 为 `showToast` 增加 `info` 类型支持，CSS 添加 `.toast.info` 蓝色样式
+3. `info` 类型 toast 显示 4 秒（普通 2.5 秒），给用户足够时间查看测试进度
+4. 自动滚动到结果区，让测试进度清晰可见
+
+## 瓶颈 9：打印功能被浏览器拦截
+
+**我们面临的核心挑战**：点击「打印选中」按钮后没有反应，无法生成打印预览。
+
+**我们在哪里卡住了**：原实现使用 `window.open()` 打开新窗口打印，但现代浏览器对 `window.open` 的拦截策略非常严格——即使在用户点击事件中调用，也可能被浏览器的弹窗拦截器拦截。此外，`formatAIAnswer` 函数内部有 `setTimeout` 调用，尝试在新窗口查找 `$('answerContent')` 元素，但该元素在新窗口中根本不存在，可能抛出错误。
+
+**为应对瓶颈所做的调整**：放弃 `window.open` 方案，改用**隐藏 iframe** + `iframe.contentWindow.print()` 打印。这种方式完全在当前页面内完成，不触发任何弹窗拦截。
+
+**我们找到的解决方案**：
+
+1. 创建零尺寸（0×0）的 iframe 元素并附加到 body
+2. 将打印 HTML 写入 iframe 的文档
+3. 调用 `iframe.contentWindow.print()` 触发打印
+4. 打印完成后延迟 1 秒移除 iframe，清理 DOM
+5. 打印页面的 AI 解答使用内联的 `marked.parse` 直接转换，不调用可能出错的 `formatAIAnswer`
+6. 添加加载状态 toast（`info` 类型）和错误处理
+
 # Git 版本控制
 
 本项目通过 Git 进行版本控制，提交历史完整记录了开发过程。以下是关键提交节点：
@@ -253,6 +285,16 @@ lang: zh-CN
 | feat: 裁剪 UI | 实现图片裁剪功能 | v0.2 |
 | feat: OCR 识别 | 集成 Tesseract.js OCR | v0.3 |
 | feat: AI 解答 | 接入 AI 解答功能 | v0.4 |
+| feat: 学科管理 | 学科管理与 localStorage | v0.5 |
+| feat: 深色模式 + PWA | 深色模式与 PWA 支持 | v0.6 |
+| feat: 题型分类 | 自定义题型系统 | v0.7 |
+| feat: 大模型替换 OCR | Qwen3-VL 系列视觉大模型 | v0.8 |
+| feat: 公式 Markdown 渲染 | KaTeX + marked.js 全场景渲染 | v0.9 |
+| feat: DeepSeek-V3 升级 | AI 解答模型升级 | v1.0 |
+| fix: OCR 语法错误修复 | 修复提示词语法错误 | v1.0.1 |
+| docs: 添加期末报告 | report.qmd + report.pdf | v1.0.2 |
+| fix: 修复测试 API Key | style.display 修复 + info toast | v1.0.3 |
+| fix: 修复打印按钮 | iframe 打印方案 | v1.0.3 |
 | feat: 学科管理 | 学科管理与 localStorage | v0.5 |
 | feat: 深色模式 + PWA | 深色模式与 PWA 支持 | v0.6 |
 | feat: 题型分类 | 自定义题型系统 | v0.7 |
