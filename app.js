@@ -607,7 +607,7 @@
   }
   // ===== 打印功能（移动端优化版）=====
   // 当前构建版本号，用于检测客户端是否需要刷新
-  const APP_VERSION = '15';
+  const APP_VERSION = '16';
   const APP_VERSION_KEY = 'errorNotebook_appVersion';
 
   function printSelectedErrors() {
@@ -679,79 +679,63 @@
 
     const fullHTML = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>错题打印</title>' + styleHTML + printCSS + '</head><body><h1>📓 我的错题本</h1><div class="meta">打印时间：' + now + ' · 共 ' + selected.length + ' 道题</div>' + itemsHTML + printButtonHTML + '</body></html>';
 
-    // 移除已有的打印 iframe
-    var existingFrame = document.getElementById('printFrame');
-    if (existingFrame) existingFrame.remove();
-
-    // 方法 1：使用 Blob URL + 隐藏 iframe（最兼容的方案）
-    try {
-      var blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
-      var blobUrl = URL.createObjectURL(blob);
-
-      var iframe = document.createElement('iframe');
-      iframe.id = 'printFrame';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '1px';
-      iframe.style.height = '1px';
-      iframe.style.border = '0';
-      iframe.style.opacity = '0';
-      iframe.src = blobUrl;
-      document.body.appendChild(iframe);
-
-      iframe.onload = function() {
-        setTimeout(function() {
-          try {
-            // 移动端：让 iframe 内容显示在主页面，方便用户点击打印按钮
-            // 这里我们使用一种混合方案：在当前页面打开打印预览
-            openPrintInCurrentPage(fullHTML, selected.length);
-            // 清理 iframe
-            setTimeout(function() {
-              iframe.remove();
-              URL.revokeObjectURL(blobUrl);
-            }, 500);
-          } catch (e) {
-            console.error('Print error:', e);
-            showToast('打印失败：' + e.message, 'error');
-            iframe.remove();
-            URL.revokeObjectURL(blobUrl);
-          }
-        }, 100);
-      };
-    } catch (e) {
-      console.error('Print iframe error:', e);
-      // 降级：直接用当前页面显示打印内容
-      openPrintInCurrentPage(fullHTML, selected.length);
-    }
+    // 简化方案：直接在当前页面显示打印内容（最可靠的方案，兼容所有设备）
+    // 之前的 iframe 方案在移动端会卡住（opacity:0 的 iframe 不会触发 onload）
+    openPrintInCurrentPage(fullHTML, selected.length);
   }
 
-  // 在当前页面打开打印预览（移动端友好）
+  // 在当前页面打开打印预览（移动端友好 + 桌面端友好）
   function openPrintInCurrentPage(htmlContent, count) {
-    // 保存当前页面内容
-    var savedBody = document.body.innerHTML;
+    // 保存当前页面完整状态（包括所有 event listener）
+    var savedBodyHTML = document.body.innerHTML;
     var savedTitle = document.title;
+
+    // 提取打印页面的 body 内容（去掉 <body> 标签本身）
+    var bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    var printBodyContent = bodyMatch ? bodyMatch[1] : htmlContent;
+
+    // 构建打印页面的包装（保留返回按钮和打印按钮）
+    var wrappedHTML = '<div id="printOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:white;z-index:99998;overflow:auto;padding:20px">' +
+      '<div style="position:fixed;top:10px;right:10px;z-index:99999;display:flex;gap:8px">' +
+        '<button id="printDoBtn" style="padding:10px 20px;background:#4F46E5;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)">🖨️ 打印 / 保存 PDF</button>' +
+        '<button id="printBackBtn" style="padding:10px 16px;background:#6B7280;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)">← 返回</button>' +
+      '</div>' +
+      printBodyContent +
+    '</div>';
 
     // 替换为打印内容
     document.title = '错题打印 - ' + count + '道题';
-    document.body.innerHTML = htmlContent;
+    document.body.innerHTML = wrappedHTML;
 
-    // 添加返回按钮
-    var backBtn = document.createElement('button');
-    backBtn.textContent = '← 返回错题本';
-    backBtn.style.cssText = 'position:fixed;top:10px;right:10px;padding:10px 16px;background:#4F46E5;color:white;border:none;border-radius:6px;font-size:14px;cursor:pointer;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
-    backBtn.onclick = function() {
-      // 恢复原页面
-      document.body.innerHTML = savedBody;
-      document.title = savedTitle;
-      // 重新初始化（因为 DOM 被替换了）
-      setTimeout(function() {
-        init();
-      }, 50);
-    };
-    document.body.appendChild(backBtn);
+    // 绑定打印按钮
+    var doBtn = document.getElementById('printDoBtn');
+    if (doBtn) {
+      doBtn.onclick = function() {
+        showToast('正在打开打印对话框...', 'info');
+        setTimeout(function() {
+          try {
+            window.print();
+          } catch (e) {
+            showToast('打印失败：' + e.message, 'error');
+          }
+        }, 100);
+      };
+    }
 
-    showToast('已打开打印预览（' + count + ' 道题）', 'success');
+    // 绑定返回按钮
+    var backBtn = document.getElementById('printBackBtn');
+    if (backBtn) {
+      backBtn.onclick = function() {
+        document.body.innerHTML = savedBodyHTML;
+        document.title = savedTitle;
+        // 重新绑定事件（因为 DOM 被替换了）
+        setTimeout(function() {
+          init();
+        }, 50);
+      };
+    }
+
+    showToast('已打开打印预览（共 ' + count + ' 道题），点击右上角「打印 / 保存 PDF」按钮', 'success');
   }
   function toggleSelectAll() {
     const checkboxes = $$('.error-checkbox');
@@ -1133,16 +1117,31 @@ $('btnStartOCR').addEventListener('click', startOCR);
     // 深色模式切换
     const btnTheme = $('btnTheme');
     const savedTheme = localStorage.getItem('errorNotebook_theme');
+    // 检测系统深色模式
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     function applyTheme(t) {
+      // t 可以是 'light', 'dark', 'auto'
       document.documentElement.dataset.theme = t;
-      btnTheme.textContent = t === 'dark' ? '☀️' : '🌙';
+      // auto 时根据系统偏好决定显示
+      if (t === 'auto') {
+        btnTheme.textContent = prefersDark ? '☀️' : '🌙';
+      } else {
+        btnTheme.textContent = t === 'dark' ? '☀️' : '🌙';
+      }
     }
     applyTheme(savedTheme || 'auto');
     btnTheme.addEventListener('click', function () {
-      const cur = document.documentElement.dataset.theme || 'auto';
-      const next = cur === 'dark' ? 'light' : 'dark';
+      // 获取实际渲染模式（auto 时按系统偏好）
+      var cur = document.documentElement.dataset.theme || 'auto';
+      var actualMode = cur;
+      if (cur === 'auto') {
+        actualMode = prefersDark ? 'dark' : 'light';
+      }
+      // 切换到相反的模式
+      var next = actualMode === 'dark' ? 'light' : 'dark';
       applyTheme(next);
       localStorage.setItem('errorNotebook_theme', next);
+      showToast('已切换到' + (next === 'dark' ? '深色' : '浅色') + '模式', 'success');
     });
     $('btnCloseSettings').addEventListener('click', function () { $('settingsOverlay').hidden = true; });
     $('settingsOverlay').addEventListener('click', function (e) {
@@ -1194,7 +1193,7 @@ $('btnStartOCR').addEventListener('click', startOCR);
       if (e.target === e.currentTarget) e.currentTarget.hidden = true;
     });
     $('btnCopyLink').addEventListener('click', function () {
-      var link = 'https://5715cd46ea204e47b1bdcbcc5ca7a5bc.app.codebuddy.work';
+      var link = 'https://Zy1222dgbsw.github.io/error-notebook-app/';
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).then(function () {
           showToast('链接已复制！粘贴到手机浏览器即可打开', 'success');
