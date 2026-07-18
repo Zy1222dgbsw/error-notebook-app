@@ -61,7 +61,7 @@
 | 公式渲染 | KaTeX | 最快的数学公式渲染库 |
 | Markdown | marked.js | 轻量级 Markdown 解析器 |
 | 存储 | localStorage | 简单可靠，数据在用户设备 |
-| 离线 | Service Worker | PWA 离线缓存 |
+| 离线 / PWA | manifest.json | 可安装到手机主屏幕（Service Worker 离线缓存暂未启用） |
 | 版本 | Git + GitHub | 完整开发故事 |
 
 ---
@@ -106,7 +106,7 @@ error-notebook-app/
 ├── style.css           # 样式（含深色模式 + 渲染内容样式）
 ├── app.js              # 全部业务逻辑（AI识别 + 渲染 + AI解答）
 ├── manifest.json       # PWA 配置
-├── sw.js               # Service Worker（离线缓存）
+├── sw.js               # Service Worker 占位（离线缓存暂未启用）
 ├── 项目报告.md          # 课程报告
 └── README.md
 ```
@@ -155,8 +155,8 @@ error-notebook-app/
 | LaTeX 公式在列表中不渲染 | 统一使用 renderMathInElement 遍历渲染 | KaTeX 渲染时机管理 |
 | OCR 提示词中单引号字符串包含换行 | 改用 `\n` 转义 | JavaScript 字符串语法 |
 | 测试 API Key 按钮无反应 | 内联 `display:none` 优先级高于 `hidden` 属性，改用 `style.display='block'` | CSS 优先级：内联 > 属性选择器 |
-| 打印按钮被浏览器拦截 | 用隐藏 iframe 替代 `window.open` | 弹窗策略严格，iframe 更可靠 |
-| iOS Safari 移动端 iframe print 失效 | 改用 Blob URL + 当前页面内显示打印内容 + 手动按钮调用 | 移动端对 iframe/print 限制更严格 |
+| 打印按钮被浏览器拦截 / iframe 失效 | 改用浮层 overlay + addEventListener 绑定按钮，规避 window.open 拦截与 iframe 限制 | 动态元素事件用 addEventListener |
+| 打印浮层按钮静默失效 | NodeList `.map` 改用 `Array.prototype.map.call`；行内 onclick 引号转义改为 addEventListener | 事件绑定别用行内 onclick |
 | GitHub Pages + HTTP 缓存导致旧代码运行 | 资源 URL 加 `?v=N` 版本号 + localStorage 版本检测 | 缓存破除双重保险 |
 
 
