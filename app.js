@@ -606,7 +606,7 @@
     showToast('错题已删除', 'success');
   }
   // ===== 打印功能（overlay 方案）=====
-  var APP_VERSION = "17";
+  var APP_VERSION = "18";
   var APP_VERSION_KEY = "errorNotebook_appVersion";
 
   function printSelectedErrors() {
@@ -616,7 +616,7 @@
     var selected = STATE.errors.filter(function(e) { return selectedIds.indexOf(e.id) >= 0; });
     if (selected.length === 0) { showToast("未找到选中的错题", "warning"); return; }
 
-    // 构建 overlay HTML
+    // 移除旧浮层，避免叠加
     var oldO = document.getElementById("printOverlayWrap");
     if (oldO) oldO.remove();
 
@@ -624,44 +624,54 @@
     var items = selected.map(function(error, idx) {
       var subj = STATE.subjects.find(function(s) { return s.id === error.subjectId; });
       var sName = subj ? subj.name : "未分类";
-      var t = error.questionType ? "<span class=type-tag>" + escapeHTML(error.questionType) + "</span>" : "";
-      var img = error.imageData ? "<img src=" + error.imageData + " class=error-image>" : "";
+      var t = error.questionType ? "<span class=\"type-tag\">" + escapeHTML(error.questionType) + "</span>" : "";
+      var img = error.imageData ? "<img src=\"" + error.imageData + "\" class=\"error-image\">" : "";
       var ans = "";
       if (error.aiAnswer) {
         var a = String(error.aiAnswer);
         if (typeof marked !== "undefined" && marked.parse) {
           try { ans = marked.parse(a); } catch(e) { ans = a.replace(/\n/g,"<br>"); }
         } else { ans = a.replace(/## (.+)/g,"<h3>$1</h3>").replace(/\n/g,"<br>"); }
-        ans = "<details><summary>AI 解答</summary><div class=ai-answer>" + ans + "</div></details>";
-      } else { ans = "<div class=answer-line></div><div class=answer-line></div>"; }
-      return "<div class=error-item><div class=error-header><span class=subject-tag>" + escapeHTML(sName) + "</span>" + t + "<span class=date>" + new Date(error.createdAt).toLocaleDateString("zh-CN") + "</span></div><div class=question-num>第 " + (idx+1) + " 题</div>" + img + "<div class=question-text>" + escapeHTML(error.ocrText) + "</div>" + ans + "</div>";
+        ans = "<details><summary>AI 解答</summary><div class=\"ai-answer\">" + ans + "</div></details>";
+      } else { ans = "<div class=\"answer-line\"></div><div class=\"answer-line\"></div>"; }
+      return "<div class=\"error-item\"><div class=\"error-header\"><span class=\"subject-tag\">" + escapeHTML(sName) + "</span>" + t + "<span class=\"date\">" + new Date(error.createdAt).toLocaleDateString("zh-CN") + "</span></div><div class=\"question-num\">第 " + (idx+1) + " 题</div>" + img + "<div class=\"question-text\">" + escapeHTML(error.ocrText) + "</div>" + ans + "</div>";
     }).join("");
 
-    // 使用数据 URI 生成内联 CSS
-    var printCSS = "<link rel=stylesheet href=style.css?v=" + APP_VERSION + ">";
-
-    var overlayHTML = "<div id=printOverlayWrap class=print-overlay>" +
-      "<div class=print-topbar>" +
+    var overlayHTML = "<div id=\"printOverlayWrap\" class=\"print-overlay\">" +
+      "<div class=\"print-topbar\">" +
         "<span>📓 打印预览 · " + selected.length + " 道题</span>" +
         "<div>" +
-          "<button onclick=document.getElementById(\"printOverlayWrap\").remove() class=btn-print-close>✕ 关闭</button>" +
-          "<button onclick=\"window.print();setTimeout(function(){var e=document.getElementById(\\\"printOverlayWrap\\\");if(e)e.remove();},1000)\" class=btn-print-go>🖨️ 打印 / 保存 PDF</button>" +
+          "<button type=\"button\" class=\"btn-print-close\">✕ 关闭</button>" +
+          "<button type=\"button\" class=\"btn-print-go\">🖨️ 打印 / 保存 PDF</button>" +
         "</div>" +
       "</div>" +
-      "<div class=print-content>" +
-        printCSS +
-        "<h1 class=print-title>📓 我的错题本</h1>" +
-        "<div class=print-meta>打印时间：" + now + " · 共 " + selected.length + " 道题</div>" +
+      "<div class=\"print-content\">" +
+        "<h1 class=\"print-title\">📓 我的错题本</h1>" +
+        "<div class=\"print-meta\">打印时间：" + now + " · 共 " + selected.length + " 道题</div>" +
         items +
       "</div>" +
     "</div>";
 
     document.body.insertAdjacentHTML("beforeend", overlayHTML);
-    showToast("打印预览已打开（" + selected.length + " 道题）", "success");
+    var overlay = document.getElementById("printOverlayWrap");
+    if (!overlay) return;
 
-    var sv = localStorage.getItem(APP_VERSION_KEY);
-    if (sv && sv !== APP_VERSION) { setTimeout(function() { showToast("检测到新版本 v" + APP_VERSION + "，已更新", "success"); }, 2000); }
-    localStorage.setItem(APP_VERSION_KEY, APP_VERSION);
+    // 用 addEventListener 绑定（避开行内 onclick 的引号转义陷阱）
+    overlay.querySelector(".btn-print-close").addEventListener("click", function () {
+      overlay.remove();
+    });
+    overlay.querySelector(".btn-print-go").addEventListener("click", function () {
+      var removed = false;
+      function cleanup() {
+        if (!removed) { removed = true; if (overlay.parentNode) overlay.remove(); }
+      }
+      // 打印对话框关闭后自动移除浮层；部分环境不触发 afterprint，加兜底
+      window.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(cleanup, 1800);
+      window.print();
+    });
+
+    showToast("打印预览已打开（" + selected.length + " 道题），点「打印 / 保存 PDF」即可", "success");
   }
 
   function toggleSelectAll() {

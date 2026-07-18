@@ -1067,8 +1067,16 @@ body {
   text-align: center; color: #6B7280; margin-bottom: 30px; font-size: 14px;
 }
 @media print {
-  .print-overlay { position: static; }
-  .print-topbar { display: none; }
+  /* 打印时只显示错题内容，隐藏其余界面 */
+  body * { visibility: hidden; }
+  #printOverlayWrap, #printOverlayWrap * { visibility: visible; }
+  #printOverlayWrap {
+    position: absolute !important; left: 0 !important; top: 0 !important;
+    width: 100% !important; height: auto !important; overflow: visible !important;
+    background: #fff !important; z-index: auto !important;
+  }
+  .print-topbar { display: none !important; }
+  .print-content { padding: 0 !important; }
 }
 
 @keyframes slideIn {
