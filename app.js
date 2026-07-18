@@ -616,7 +616,7 @@
       showToast('请先勾选要打印的错题', 'warning');
       return;
     }
-    const selectedIds = checkboxes.map(function (cb) { return cb.dataset.id; });
+   const selectedIds = Array.from(checkboxes).map(function (cb) { return cb.dataset.id; });
     const selected = STATE.errors.filter(function (e) { return selectedIds.indexOf(e.id) >= 0; });
     if (selected.length === 0) {
       showToast('未找到选中的错题', 'warning');
